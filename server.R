@@ -359,7 +359,7 @@ shinyServer(function(input, output,session) {
       shinyjs::html("toggleHelpData","데이터 도움말 보기/가리기") 
       shinyjs::html("introduction",md2html(
 "이 앱을 사용하여 `구조방정식 모형`을 이용한 분석을 할 수 있습니다. `확인요인분석`,`구조방정식 모형`,
-`교차타당성분석`,`매개효과분석`,`잠재성장모형분석`,`부분최소회귀모형(PLS)`를 사용한 분석 등을 시행할 수 있습니다.
+`교차타당성분석`,`매개효과분석`,`부분최소회귀모형(PLS)`를 사용한 분석 등을 시행할 수 있습니다.
 분석과 함께 멋진 plot을 얻을 수 있으며 plot 을 고해상도 이미지(png)로 저장하거나 벡터그래픽(svg) 또는 pdf 형식으로
 다운로드 할 수 있으며 `파워포인트` 파일로도 다운로드 받을 수 있습니다. 자료가 준비된 경우 자료의 분석과 파워포인트 파일
 다운로드까지 일분이면 충분합니다."))
@@ -367,19 +367,16 @@ shinyServer(function(input, output,session) {
                         choices=c("선택안함"=0,"확인요인분석"=1,
                                      "구조방정식모형"=2,"교차타당성분석"=3,
                                      "매개효과분석"=4,
-                                     "잠재성장모형"=5,
                                      "ADHD 데이타"=6))
       updateRadioButtons(session, "method",label = "분석 옵션 선택",
                          choices=c("구조방정식모형 사용"="sem",
                                       "확인분석모형 사용"="cfa",
-                                      "성장곡선모형 사용"="growth",
                                       "부분최소회귀(PLS)모형 사용"="matrixpls"))
       updateRadioButtons(session, inputId = "Example", label = "데이타 선택",
                          choices = c("HolzingerSwineford1939",
                                      "PoliticalDemocracy",
                                      "example1",
                                      "example2",
-                                     "Demo.growth",
                                      "ADHD",
                                         "업로드한 파일"="uploaded_file"),selected=input$Example)
     }    
@@ -406,7 +403,7 @@ shinyServer(function(input, output,session) {
       shinyjs::html("introduction",md2html(
 "With this app, you can perform `structural equation modeling` with `just one-click`. 
 You can perform the `confirmatory factor analysis`, fit a `structural equation model`, 
-fit a `growth curve model`, and fit a `partial least square(PLS) model`. 
+and fit a `partial least square(PLS) model`. 
 Additionally, you can obtain beautiful plots in png, svg or pdf format. 
 You can download the results with html or PDF format. 
 You can also download the powerpoint file with `just one click`."))
@@ -415,19 +412,16 @@ You can also download the powerpoint file with `just one click`."))
                                      "Structural Equation Model"=2,
                                       "Cross-Validation Analysis"=3,
                                      "Mediation Effect Analysis"=4,
-                                     "Latent Growth Modeling"=5,
                                      "ADHD data"=6))
       updateRadioButtons(session,"method",label="Analysis options",
                          choices=c("fit a Structural Equation Model"="sem",
                                       "fit a Confirmatory Factor Analysis Models"="cfa",
-                                      "fit a Growth Curve Model"="growth",
                                       "fit a Partial Least Squares Model"="matrixpls"))
       updateRadioButtons(session,inputId = "Example", label = "Select Data",
                          choices = c( "HolzingerSwineford1939",
                                       "PoliticalDemocracy",
                                      "example1",
                                      "example2",
-                                     "Demo.growth",
                                      "ADHD",
                                         "uploaded_file"),selected=input$Example)
      
@@ -1422,6 +1416,53 @@ Sobel <- function (a, b, sa, sb) {
   result=t(out)
   data.frame(result)
 }
+
+observeEvent(input$resetinspect,{
+    
+    choices=c("matrices","data","stats","features","samplestats","optimizer",
+              "infmatrices","varcovpar","misc")
+    for(i in 1:length(choices)) updateSelectInput(session,choices[i],selected="none")
+})
+
+output$inspect.ui=renderUI({
+  input$inspect
+  
+  isolate({
+  if(inspectstatus()>0){
+    verbatimTextOutput("inspecttext")
+  }
+  })  
+})
+
+inspectstatus=reactive({
+    result=0
+    choices=c("matrices","data","stats","features","samplestats","optimizer",
+            "infmatrices","varcovpar","misc")
+    for(i in 1:length(choices)){
+       if(input[[choices[i]]]!="none") result=result+1
+    } 
+    result
+})
+
+output$inspecttext=renderPrint({
+   
+   input$inspect
+  
+   isolate({
+     if(inspectstatus()>0){
+
+         fit<-myfit()
+       choices=c("matrices","data","stats","features","samplestats","optimizer",
+              "infmatrices","varcovpar","misc")
+       for(i in 1:length(choices)){
+         if(input[[choices[i]]]!="none"){
+            cat("\n## Section:",choices[i],"-",input[[choices[i]]]," ##\n\n")
+            print(lavInspect(fit,what=input[[choices[i]]]))
+         }
+       }
+     }
+   })
+})
 
 })
 

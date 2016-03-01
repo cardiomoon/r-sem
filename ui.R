@@ -48,7 +48,6 @@ shinyUI(fluidPage(
                                                           "PoliticalDemocracy",
                                                           "example1",
                                                           "example2",
-                                                          "Demo.growth",
                                                           "ADHD",
                                                              "uploaded_file"),
                                               selected = "HolzingerSwineford1939"),
@@ -56,7 +55,6 @@ shinyUI(fluidPage(
                                              choices=c("None"=0,"Confirmatory Factor Analysis"=1,
                                                "Structural Equation Model"=2,"Cross-Validation Analysis"=3,
                                                "Mediation Effect Analysis"=4,
-                                               "Latent Growth Modeling"=5,
                                                "ADHD data"=6),
                                              selected=0),
                            
@@ -133,8 +131,8 @@ shinyUI(fluidPage(
                                                                      "fit a Growth Curve Model"="growth",
                                                                      "fit a Partial Least Squares Model"="matrixpls"),
                                                            selected="sem"),
-                                              div(id="editOrder","Edit Analysis Order"),
-                                              checkboxInput("editAnalysis","Edit Analysis Order",value=FALSE))),
+                                              div(id="editOrder","Manual command line spec"),
+                                              checkboxInput("editAnalysis","Manual command line specification",value=FALSE))),
                            column(4,wellPanel(
                                               selectInput("group","group",c(""),selected=""),
                                               selectInput("group.equal","group.equal",
@@ -148,7 +146,7 @@ shinyUI(fluidPage(
                                               checkboxInput("standardized","standardized",value = TRUE),
                                               checkboxInput("fit.measures","fit.measures",value = FALSE),
                                               checkboxInput("rsquare","rsquare",value = FALSE),
-                                              checkboxInput("modindices","modindicis",value = FALSE),
+                                              checkboxInput("modindices","modindices",value = FALSE),
                                               div(id="otherOptions","Others"),
                                               checkboxInput("showcoef","show coefficient",value = FALSE),
                                               checkboxInput("showMeaInv","show Measurement Invariance",value = FALSE)
@@ -200,6 +198,46 @@ shinyUI(fluidPage(
                               )))),
                          checkboxInput("preview","Plot Preview",value = FALSE),
                          uiOutput('Model.ui'),
+                         hr(),
+                         fluidRow(
+                           htmlOutput("inspect"),
+                           p("You can inspect or extract information from a fitted lavaan object. Please select what needs to be inspect/extracted."),
+                           column(4,wellPanel(
+                             selectInput("matrices","Model matrices",choices=c("none","free","partable","se","start","est","dx.free","dx.all",
+                                                                             "std","std.lv","std.nox")),
+                           selectInput("data","data",c("none","data","group","ngroups","group.label","nobs",
+                                                       "norig","ntotal","case.idx","empty.idx","patterns",
+                                                       "coverage")),
+                           selectInput("stats","observed sample statistics",c("none","sampstat","sampstat.h1","wls.obs","wls.v","gamma"))
+                           )),
+                           column(4,wellPanel(
+                           selectInput("features","model features",c("none","meanstructure","categorical","fixed.x","parameterization")),
+                           selectInput("samplestats","model-implied sample statistics",
+                                       c("none","cov.lv","cor.lv","mean.lv","cov.ov","cor.ov","mean.ov",
+                                         "cov.all","cor.all","th","wls.est","vy","rsquare")),
+                           selectInput("optimizer","optimizer information",
+                                       c("none","converged","iterations","optim"))
+                           )),
+                           column(4,wellPanel(
+                           selectInput("infmatrices","Gradient, Hessian, observed, expected and first.order information matrices",
+                                       c("none","gradient","hessian","information","information.expected","information.observed",
+                                         "information.first.order","augumented.information","augmented.information.expected","augmented.information.observed",
+                                         "augmented.information.first.order","inverted.information","inverted.information.expected","inverted.information.observed",
+                                         "inverted.information.first.order")),
+                           selectInput("varcovpar","Variance covariance matrix of the model parameters",
+                                       c("none","vcov","vcov.std.all","vcov.std.lv",
+                                         "vcov.std.nox")),
+                           selectInput("misc","miscellaneous",
+                                       c("none","UGamma","list","fit","mi","options","call",
+                                         "timing","test","post.check"))
+                           )),
+                           column(3,actionButton("inspect","Inspect/extract inf")),
+                           column(3,actionButton("resetinspect","Reset inspect"))
+                           
+                           
+                         ),
+                         hr(),
+                         uiOutput("inspect.ui"),
                          hr(),
                          fluidRow(
                                column(3,actionButton("doSEM","Do Analysis")

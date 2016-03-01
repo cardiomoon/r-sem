@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "dictionary=read.csv(\"dictionary.csv\",fileEncoding=\"utf-8\") \n# update the processed translation file translation.bin\n# run this every time dictionary.csv is updated \n# it reads the look-up table in dictionary.csv and turns it into a 2D list\n\nlibrary(plyr)\ntranslationContent <- read.csv(\"dictionary.csv\",fileEncoding=\"utf-8\") \ntranslation <- dlply(translationContent ,.(key), function(s) key = as.list(s))\n\nsave(translation, file = \"translation.bin\")\n\n\n",
+    "created" : 1456813755055.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "720873744",
+    "id" : "D87C072B",
+    "lastKnownWriteTime" : 1450332193,
+    "last_content_update" : 1450332193,
+    "path" : "~/ownCloud/Documents/r-sem/updateTranslation1.R",
+    "project_path" : "updateTranslation1.R",
+    "properties" : {
+    },
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
