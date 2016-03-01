@@ -1,0 +1,32 @@
+---
+title: "RStudio Server에서 한글테스트"
+output:
+  pdf_document:
+    includes:
+      in_header: header.tex
+  html_document: default
+  word_document: default
+---
+
+RStudio Server의 한글 레이텍 환경을 테스트 하기 위해 sample로 만들어 보았다. 
+본문이나 제목의 한글은 아무 문제가 없으나 그림에서 한글을 구현하려면 extrafont 패키지를 불러와야 하며 R code chunk 옵션을 dev='cairo_pdf'로 주고 인쇄하여야 한다. 서버에 설치되어 있는 폰트의 종류를 확인하려면 다음과 같이 할 수 있다.
+
+```{r,message=FALSE}
+require(extrafont)
+#font_import()
+fonts()
+```
+
+extrafont 패키지를 사용할 때 warning이 나올 수 있으므로 코드 청크 옵션을 다음과 같이 설정한다. 
+
+> {r,message=FALSE,warning=FALSE,dev='cairo_pdf'}
+
+참고: html로 output을 만들때에는 r 코드청크 부분의 dev='cairo_pdf'를 빼고 knit하여야 한다.
+
+```{r, fig.height=9,message=FALSE,warning=FALSE,dev='cairo_pdf'}
+fontNo=length(fonts())
+plot(1:fontNo,type="n",xlab="",ylab="",main="사용할 수 있는 폰트")
+for(i in 1:fontNo) text(fontNo/2,i,paste(fonts()[i],"한글이 멋있다"),family=fonts()[i])
+
+```
+

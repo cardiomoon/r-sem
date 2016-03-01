@@ -1,0 +1,171 @@
+---
+title: "Results of Structural Equation Modeling"
+author: "web-r.org"
+documentclass: article
+header-includes:
+- \usepackage{multirow}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage[table]{xcolor}
+- \usepackage{tabularx,booktabs}
+- \usepackage{boxedminipage}
+- \usepackage{graphicx}
+- \usepackage{rotating}
+- \usepackage{longtable}
+output: 
+  pdf_document:
+    toc: yes
+    number_sections: true
+    toc_depth: 3
+  html_document:
+    toc: yes
+  word_document:
+    fig_width: 6
+    fig_height: 4
+geometry: margin=0.5in
+classoption: a4paper
+---
+
+```{r,echo=FALSE,message=FALSE}
+require(knitr)
+
+cath4=function(string,size=3){
+   if(input$format=="PDF") {
+       if(size==3) cat(paste("\\section{",string,"}",sep=""))
+       else if(size==4) cat(paste("\\subsection{",string,"}",sep=""))
+       else if(size==5) cat(paste("\\subsubsection{",string,"}",sep=""))
+   }
+   else if(input$format=="HTML") cat(paste("<h",size,">",string,"</h",size,">",sep=""))
+   else {
+       if(size==3) cat(paste("#",string,sep=""))  
+       else if(size==4) cat(paste("##",string,sep=""))  
+       else if(size==5) cat(paste("###",string,sep=""))  
+   }       
+}
+
+
+```
+
+
+```{r,comment=NA, echo=FALSE,results='asis'}
+
+cath4("Results of Structural-Equation Medeling")
+```
+
+```{r,comment=NA, echo=FALSE}
+      if(input$equation!=""){    
+        
+         
+        #print(str(fit))
+
+        if((input$moderating)&(input$showcor)){
+#           cat("## Correlation analysis\n")
+#           tempdf=df()[,c(input$indepvar,input$mediator,input$resvar)]
+#           print(cor(tempdf))
+#           cat("\n\n")
+        }  
+        
+         if(input$editAnalysis) cat("fit=",input$AnalysisOrder,"\n")   
+         else cat("fit=",myfittext(),"\n")
+        
+         if(input$method=="matrixpls") {
+           
+           cat("summary(fit)\n")
+           fit<-matrixpls::matrixpls(cov(df()),input$equation)
+           summary(fit)
+           print(summary(fit))
+         } else {
+           cat("summary(fit,standardized=",input$standardized,
+               ",fit.measures=",input$fit.measures,
+               ",rsquare=",input$rsquare,",modindices=",input$modindices,")\n\n")
+           fit<-myfit()
+           summary(fit,standardized=input$standardized,fit.measures=input$fit.measures,
+                   rsquare=input$rsquare,modindices=input$modindices)
+         
+         } 
+         
+         if((input$moderating)&(input$sobel)){
+             PE<-parameterEstimates(fit)
+             a=PE$est[3]
+             sa=PE$se[3]
+             b=PE$est[1]
+             sb=PE$se[1]
+             
+             result=Sobel(a,b,sa,sb)
+             print(result)
+           
+         }
+         if(input$moderating){
+             cat("\n\n## ParameterEstimates ##\n\n")
+             print(parameterEstimates(fit, boot.ci.type = "bca.simple", standardized = TRUE))
+           
+         }   
+         if(input$method=="cfa"){
+             cat("\n\n## Average Variance Extracted \n\n")
+             loadMatrix <- inspect(fit, "std")$lambda
+             loadMatrix[loadMatrix==0] <- NA
+             AVE=apply(loadMatrix^2,2,mean, na.rm = TRUE)
+             result=data.frame(AVE=AVE,SQRTAVE=sqrt(AVE))
+             print(result)
+         }
+      
+      }
+      if(input$equation2!=""){ 
+          fit2=myfit2()
+          cat("\n\n## Results of Analysis using equation2\n\nfit2=",myfittext2(),"\n")
+          cat("summary(fit2,standardized=",input$standardized,
+              ",fit.measures=",input$fit.measures,
+              ",rsquare=",input$rsquare,",modindices=",input$modindices,")\n\n")
+          summary(fit2,standardized=input$standardized,fit.measures=input$fit.measures,
+                  rsquare=input$rsquare,modindices=input$modindices)
+          if(input$compareModels){
+              cat("\n\n## Compare Models\n")
+              cat("\n\n## call: anova(fit,fit2)\n")
+              anova(fit,fit2)
+          }
+          
+      }  
+
+```
+
+```{r,comment=NA, echo=FALSE,results='asis'}
+
+cath4("Path Diagram(s)")
+```
+
+
+```{r,comment=NA, echo=FALSE,fig.height=4,fig.width=6}
+   fit<-myfit()    
+   diagram<-mysemPlot(TRUE)
+   
+    count=1
+    if(input$group!="")  count=length(unique(df()[[input$group]]))
+    
+    if(count==1) {
+       diagram$Arguments$DoNotPlot=FALSE
+       qgraph::qgraph(diagram)
+
+    } else lapply(1:count,function(k) {
+       
+        diagram[[k]]$Arguments$DoNotPlot=FALSE
+        qgraph::qgraph(diagram[[k]])
+        title(paste0(input$group,"=",k))
+    })
+   if(input$equation2!=""){
+     diagram2<-mysemPlot2(DoNotPlot=TRUE)
+     
+     if(count==1) {
+       
+       diagram2$Arguments$DoNotPlot=FALSE
+       qgraph::qgraph(diagram2)
+       
+     }  
+     else lapply(1:count,function(k) {
+      
+       diagram2[[k]]$Arguments$DoNotPlot=FALSE
+       qgraph::qgraph(diagram2[[k]])
+       title(paste0(input$group,"=",k))
+       
+     })
+   }
+```

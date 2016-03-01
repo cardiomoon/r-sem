@@ -1,0 +1,45 @@
+choices,choicesk,myfile,myequation,method
+Confirmatory Factor Analysis,확인요인분석,HolzingerSwineford1939,"visual  =~ x1 + x2 + x3 
+textual =~ x4 + x5 + x6
+speed   =~ x7 + x8 + x9",cfa
+Structural Equation Model,구조방정식모형,PoliticalDemocracy,"# measurement model
+ind60 =~ x1 + x2 + x3
+dem60 =~ y1 + y2 + y3 + y4
+dem65 =~ y5 + y6 + y7 + y8
+# regressions
+dem60 ~ ind60
+dem65 ~ ind60 + dem60
+# residual correlations
+y1 ~~ y5
+y2 ~~ y4 + y6
+y3 ~~ y7
+y4 ~~ y8
+y6 ~~ y8",sem
+Cross-Validation Analysis,교차타당성분석,HolzingerSwineford1939,"visual  =~ x1 + x2 + x3 
+textual =~ x4 + x5 + x6
+speed   =~ x7 + x8 + x9",cfa
+Mediation Effect Analysis,매개효과분석,example2,"Y ~ b*M + c*X
+M ~ a*X
+indirect effect:=a*b
+total effect:=c+(a*b)",sem
+Latent Growth Curves,잠재성장모형,Demo.growth,"# intercept and slope with fixed coefficients
+i =~ 1*t1 + 1*t2 + 1*t3 + 1*t4
+s =~ 0*t1 + 1*t2 + 2*t3 + 3*t4
+# regressions
+i ~ x1 + x2
+s ~ x1 + x2
+# time-varying covariates
+t1 ~ c1
+t2 ~ c2
+t3 ~ c3
+t4 ~ c4",growth
+ADHD data,ADHD 데이타,ADHD,"knowledge =~ general+symptoms+treatmt
+empathy =~ cognitiv+emotion+disposit+attitude
+intervention =~ classrm+instruct
+intervention ~ b*empathy + c*knowledge
+empathy ~ a*knowledge
+indirect effect:=a*b
+total effect:=c+(a*b)",sem
+,,,,
+,,,,
+,,,,
