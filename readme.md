@@ -34,6 +34,10 @@ r-meta  | [r-meta](http://45.118.135.113:3838/meta)|[r-meta](http://85.90.244.15
  
 Other apps including web-based `ggplot2` app and web-based `analysis using R` will be available soon. 
 
+## Issues
+
+[https://github.com/cardiomoon/r-sem/issues](https://github.com/cardiomoon/r-sem/issues)
+
 ## About the Author 
 
 My name is Keon-Woong Moon. I am a Professor of Cardiology at Catholic University of Korea, South Korea. I am the creator and maintainer of the r-meta.com and web-r.org.
