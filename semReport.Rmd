@@ -58,7 +58,7 @@ cath4("Results of Structural-Equation Medeling")
          
         #print(str(fit))
 
-        if((input$moderating)&(input$showcor)){
+        if((input$moderating)){
 #           cat("## Correlation analysis\n")
 #           tempdf=df()[,c(input$indepvar,input$mediator,input$resvar)]
 #           print(cor(tempdf))
@@ -134,7 +134,7 @@ cath4("Path Diagram(s)")
 ```
 
 
-```{r,comment=NA, echo=FALSE,fig.height=4,fig.width=6}
+```{r,comment=NA, echo=FALSE,fig.height=7,fig.width=10}
    fit<-myfit()    
    diagram<-mysemPlot(TRUE)
    
@@ -142,8 +142,12 @@ cath4("Path Diagram(s)")
     if(input$group!="")  count=length(unique(df()[[input$group]]))
     
     if(count==1) {
-       diagram$Arguments$DoNotPlot=FALSE
-       qgraph::qgraph(diagram)
+      if(input$plotOption2=="mediationPlot"){
+         diagram
+      } else{
+         diagram$Arguments$DoNotPlot=FALSE
+         qgraph::qgraph(diagram)
+      }
 
     } else lapply(1:count,function(k) {
        
@@ -151,6 +155,7 @@ cath4("Path Diagram(s)")
         qgraph::qgraph(diagram[[k]])
         title(paste0(input$group,"=",k))
     })
+    
    if(input$equation2!=""){
      diagram2<-mysemPlot2(DoNotPlot=TRUE)
      

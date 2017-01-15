@@ -10,6 +10,8 @@ library(shinythemes)
 #require(shinyjs)
 require(rhandsontable)
 require(shinyBS)
+require(shinyTree)
+#require(shinyDND)
 
 source("textInput2.R")
 
@@ -110,18 +112,44 @@ shinyUI(fluidPage(
                            div(id="helpOperator",
                                uiOutput("operatorHelp")
                            )),
+                         
+                         # fluidRow(
+                         #   h3("Edit mediation equation by drag and drop"),
+                         #   p("Drag and drop the variable names and press the `make mediation equation` button"),
+                         #   column(3,uiOutput("Drag")),
+                         #   column(5, uiOutput("Drop")),
+                         #   
+                         #   column(4,          actionButton("MakeEquation2","make mediation equation"),
+                         #          hr(),
+                         #          actionButton("resetMediation2","reset mediation equation"),
+                         #          hr(),
+                         #          textareaInput("mediationEquation2","mediation Equation",rows=8,width=300),
+                         #          actionButton("addMediationEquation2","add to the equation")
+                         #   )       
+                         # ),
+                         # fluidRow(
+                         #    h3("Edit mediation equation by drag and drop"),
+                         #    shinyTree("tree",dragAndDrop=TRUE),
+                         #    verbatimTextOutput("treestr")
+                         # ),
                          fluidRow(
-                             checkboxInput("moderating","Mediation Effect Analysis"),
-                             conditionalPanel(condition="input.moderating== true",
-                                              column(4,wellPanel(
-                                                  
-                                                  selectInput("indepvar","independent variable",c(""),selected="",selectize=TRUE),
-                                                  selectInput("mediator","mediator",c(""),selected="",selectize=TRUE),
-                                                  selectInput("resvar","response variable",c(""),selected="",selectize=TRUE),
-                                                  checkboxInput("showcor","show correlation",value=TRUE),
-                                                  checkboxInput("sobel","perform sobel test",value=TRUE),
-                                                  actionButton("MakeEquation","Make Equation")
-                                              )))
+                           checkboxInput("moderating","Edit Mediation Effect by SelectInput"),
+                           conditionalPanel(condition="input.moderating== true",
+                                            column(4,wellPanel(
+                                              
+                                              selectInput("indepvar","independent variable",c(""),selected="",selectize=TRUE,multiple=TRUE),
+                                              selectInput("mediator","mediator",c(""),selected="",selectize=TRUE,multiple=TRUE),
+                                              selectInput("resvar","response variable",c(""),selected="",selectize=TRUE,multiple=TRUE),
+                                              #checkboxInput("showcor","show correlation",value=TRUE),
+                                              checkboxInput("sobel","perform sobel test",value=TRUE)
+                                              
+                                            )),
+                                            column(3,actionButton("MakeEquation","make mediation Equation"),
+                                                   hr(),
+                                                   actionButton("resetMediation","reset mediation Equation")),
+                                            column(5,wellPanel(textareaInput("mediationEquation","mediation Equation",rows=8,width=300),
+                                                               actionButton("addMediationEquation","add to the equation")
+                                            )))
                          ),
                          fluidRow(
                            htmlOutput("analysisOption"),
@@ -172,7 +200,9 @@ shinyUI(fluidPage(
                               column(12,a(id = "toggleFinalPlot", h4("Plot Options show/hide")),
                                      shinyjs::hidden(
                                        div(id="finalPlot",
-                              column(3, wellPanel(selectInput("what","what",c("path","est","std","eq","col"),
+                                           radioButtons("plotOption2","plot Option",choices=c("semPaths","mediationPlot"),selected="semPaths"),
+                            conditionalPanel(condition="input.plotOption2=='semPaths'",  
+                             column(3, wellPanel(selectInput("what","what",c("path","est","std","eq","col"),
                                           multiple=TRUE,selectize=TRUE,selected="path"),
                               selectInput("whatLabels","whatLabels",c("label","est","std","eq","hide"),
                                           multiple=TRUE,selectize=TRUE,selected="std"),
@@ -193,12 +223,44 @@ shinyUI(fluidPage(
                                 selectInput3("rotation","rotation",1:4,selected=1,width=120),
                                 selectInput3("groups","groups",c("","manifests","latents","manlat"),selected="manlat",width=120),
                                 textInput("Other","Other Options",value="")
-                              ))
+                              ))),
+                            conditionalPanel(condition="input.plotOption2=='mediationPlot'",  
+                                 column(3, wellPanel( 
+                                   selectInput("whatLabels2","whatLabels",c("std","est","name"),
+                                                                             selectize=TRUE,selected="std"),
+                                   numericInput("maxx","maxx",value=60),
+                                   numericInput("maxy","maxy",value=30))),
+                                 column(3, wellPanel( 
+                                   numericInput("rectHeight","rect height",value=3),
+                                   numericInput("rectWidth","rect width",value=8),
+                                   numericInput("base_size","font size",value=5),
+                                   selectInput("base_family","font family",
+                                               c("Arial","Times","NanumGothic"),selected="NanumGothic")
+                                   )),
+                                 column(3, wellPanel( 
+                                   checkboxInput("usecolor","usecolor",value=TRUE),
+                                   checkboxInput("clean","clean theme",value=TRUE),
+                                   checkboxInput("mediationOnly","mediationOnly",value=FALSE),
+                                   checkboxInput("residuals2","residuals",value=FALSE),
+                                   checkboxInput("regression","regression",value=TRUE),
+                                   checkboxInput("indirect","indirect",value=FALSE),
+                                   checkboxInput("secondIndirect","secondIndirect",value=FALSE)
+                                 ))
+                            )
                             
                               )))),
                          checkboxInput("preview","Plot Preview",value = FALSE),
                          uiOutput('Model.ui'),
                          hr(),
+                         fluidRow(
+                           htmlOutput("Tables"),
+                           checkboxInput("showtable","show tables",value=FALSE),
+                           conditionalPanel(condition="input.showtable== true",
+                                          checkboxInput("vanilla","as vanilla table",value=FALSE),
+                                          uiOutput("tableui")
+                           )
+                         ),
+                         
                          fluidRow(
                            htmlOutput("inspect"),
                            p("You can inspect or extract information from a fitted lavaan object. Please select what needs to be inspect/extracted."),
@@ -250,14 +312,16 @@ shinyUI(fluidPage(
                                column(3,downloadButton("downloadPlot","download Plot(s)"),
                                       radioButtons('plotformat', 'Format As', c('png', 'svg','pdf'),
                                                    inline = TRUE,selected='png'),
-                                      numericInput3("plotWidth","width",value=7,step=0.1,width=50),
-                                      numericInput3("plotHeight","height",value=5,step=0.1,width=50)
+                                      numericInput3("plotWidth","width",value=12,step=0.1,width=70),
+                                      numericInput3("plotHeight","height",value=10,step=0.1,width=70)
                                      
                                ),
-                               column(3,downloadButton("downloadPPT","download pptx"),
-                                radioButtons('pptformat', 'Format', c('wide', 'normal'),
-                                                   inline = TRUE,selected='normal'),
-                                checkboxInput('pptvector','as vector graphic',value=FALSE)
+                               column(3,#actionButton("makePPT","make pptx"),
+                                      downloadButton("downloadPPT","download pptx"),
+                                      radioButtons('pptformat', 'Format', c('wide', 'normal'),
+                                                   inline = TRUE,selected='normal')
+                                      
+                                
                                 #,radioButtons('pptfigformat', 'Figure As', c('emf', 'png'),
                                 #                   inline = TRUE,selected='emf')
                                )

@@ -15,8 +15,15 @@ require(lavaan)
 require(semPlot)
 require(extrafont)
 #require(matrixpls)
+require(semMediation)
+require(ggplot2)
+#require(shinyDND)
+require(stringr)
+require(mycor)
+#require(shinyTree)
 
 source("cleaning.R")
+
 
 #loadfonts()
 
@@ -36,7 +43,8 @@ X <- rnorm(100)
 M <- 0.5*X + rnorm(100)
 Y <- 0.7*M + rnorm(100)
 example2 <- data.frame(X , Y , M )
-ADHD=read.csv("data/ADHD.csv")
+#ADHD=read.csv("data/ADHD.csv")
+childhood=read.csv("childhood.csv")
 
 load("translation.bin") # contains the dictionary, parsed as a double list
 
@@ -297,6 +305,10 @@ shinyServer(function(input, output,session) {
        DF
    })
    
+   observe({
+     updateSelectInput(session,"base_family",choices=c("Helvetica","NanumGothic",fonts()))
+     
+   })
    
    output$hot<-renderRHandsontable({
       DF=data() 
@@ -367,7 +379,8 @@ shinyServer(function(input, output,session) {
                         choices=c("선택안함"=0,"확인요인분석"=1,
                                      "구조방정식모형"=2,"교차타당성분석"=3,
                                      "매개효과분석"=4,
-                                     "ADHD 데이타"=6))
+                                     "ADHD 데이타"=6,
+                                  "childhood"=7))
       updateRadioButtons(session, "method",label = "분석 옵션 선택",
                          choices=c("구조방정식모형 사용"="sem",
                                       "확인분석모형 사용"="cfa",
@@ -378,6 +391,7 @@ shinyServer(function(input, output,session) {
                                      "example1",
                                      "example2",
                                      "ADHD",
+                                     "childhood",
                                         "업로드한 파일"="uploaded_file"),selected=input$Example)
     }    
     else {
@@ -506,16 +520,37 @@ observe({
       result
   })
   
-  newvar=c()
   
   observeEvent(input$add, {
     
       if(input$equation=="") updateTextInput(session,"equation",value=EqText()) 
       else updateTextInput(session,"equation",value=paste(input$equation,EqText(),sep="\n"))
-      if(input$lefttext!="") {
-         newvar<<-c(newvar,input$lefttext)
+  
+  })
+  
+  extractLatentVar=function(){
+    newvar=c()
+    if(input$equation!=""){
+      equations=unlist(strsplit(input$equation,"\n",fixed=TRUE))
+      for(i in 1:length(equations)){
+        if(grepl("=~",equations[i])==TRUE) {
+          temp=unlist(strsplit(equations[i],"=~",fixed=TRUE))[1]
+          newvar=c(newvar,temp)
+         
+        }   
       }
+    }
+    newvar
+  }
+  
+  observeEvent(input$equation,{
+     
+    newvar=c() 
+    if(input$equation!="") newvar=extractLatentVar() 
+        
+    #cat("\nnewvar=",newvar)
       newchoices=c("Select..."="",colnames(df()),newvar)
+      #cat("\nnewchoices=",newchoices)
       updateSelectInput(session,"leftvar",choices=newchoices,selected="")
       updateSelectInput(session,"rightvar",choices=newchoices,selected="")
       updateSelectInput(session,"indepvar",choices=newchoices)
@@ -523,17 +558,96 @@ observe({
       updateSelectInput(session,"mediator",choices=newchoices)
       updateSelectInput(session,"group",choices=newchoices)
       updateTextInput(session,"lefttext",value="")
+      
+      
   })
   
+  # output$Drag=renderUI({
+  #     newvar=extractLatentVar() 
+  #     newchoices=c(colnames(df()),newvar)
+  #     tagList(
+  #     p("Available variables"),
+  #     dragSetUI("vars",textval=as.list(newchoices)))
+  #     
+  #     
+  # })
+  # 
+  # output$Drop=renderUI({
+  #   tagList(
+  #   p("Independent variables"),
+  #   dropUI("XVars",class = "dropelement",row_n=3,col_n=3),
+  #   p("Mediators"),
+  #   dropUI("MVars",class = "dropelement",row_n=3,col_n=3),
+  #   p("Dependent variables"),
+  #   dropUI("YVars",class = "dropelement",row_n=3,col_n=3),
+  #   p("Discards"),
+  #   dropUI("Discards",row_n=5,col_n=3)
+  #   #,actionButton("ResetDND","Reset")
+  #   )
+  # })
+  # 
+  # observeEvent(input$ResetDND,{
+  #     cat("\nResetDND")
+  #   input$XVars=""
+  #   input$MVars=""
+  #   input$YVars=""
+  # })
+  #              
+  
+  newchoices=reactive({
+    df=df()
+    newvar=extractLatentVar() 
+    newchoices=c(colnames(df),newvar)
+    temp="structure(list("
+    for(i in 1:length(newchoices)){
+        if(i>1) temp=paste0(temp,",")
+        temp=paste0(temp,newchoices[i],"=''")
+    }
+    temp=paste0(temp,"),stopened=TRUE)")
+    #cat("temp=",temp)
+    result=eval(parse(text=temp))
+    result
+  })
+    
+  
+  # output$tree <- renderTree({
+  # 
+  #   list(
+  #     allVars=newchoices(),
+  #     independentVars = structure("",stopened=TRUE),
+  #     mediators=structure("",stopened=TRUE),
+  #     dependentVars=structure("",stopened=TRUE)
+  # 
+  # 
+  #   )
+  # 
+  # })
+
+  # output$treestr <- renderPrint({
+  #  
+  #   # shinyTrees will also be available as inputs so you can
+  #   # monitor changes that occur to the tree as the user interacts
+  #   # with it.
+  #   str(input$tree)
+  #  
+  #   cat("independentVars=")
+  #   str(names(input$tree$independentVars))
+  #   cat("\nmediators=")
+  #   str(names(input$tree$mediators))
+  #   cat("dependentVars=")
+  #   str(names(input$tree$dependentVars))
+  # })
+  # 
+  
+  observeEvent(input$addMediationEquation, {
+    updateTextInput(session,"equation",value=paste0(input$equation,"\n",input$mediationEquation))
+  })
   
   makeMediatorEq=function(){
      temp=""
-     if((input$indepvar=="")|(input$resvar=="")|(input$mediator=="")) temp=""
+     if(length(input$indepvar)*length(input$resvar)*length(input$mediator)==0) temp=""
      else {
-         temp=paste0(input$resvar," ~ b*",input$mediator," + c*",input$indepvar,"\n")
-         temp=paste0(temp,input$mediator," ~ a*",input$indepvar,"\n")
-         temp=paste0(temp,"indirect effect:=a*b\n")
-         temp=paste0(temp,"total effect:=c+(a*b)")
+         temp=makeEquation(X=input$indepvar,M=input$mediator,Y=input$resvar)
      }     
      temp
   }
@@ -543,19 +657,70 @@ observe({
     temp<-makeMediatorEq()
     if(temp=="") putmsg("Please Select Variables First")
     else {
-      if(input$equation=="") updateTextInput(session,"equation",value=temp) 
-      else updateTextInput(session,"equation",value=paste(input$equation,temp,sep="\n"))
+      updateTextInput(session,"mediationEquation",value=temp) 
       
     }  
     
   })
   
+  # observeEvent(input$addMediationEquation2, {
+  #   updateTextInput(session,"equation",value=paste0(input$equation,input$mediationEquation2))
+  # })
+  
+  
+  # drop2str=function(x){
+  #   # cat("\nx=")
+  #   # str(x)
+  #   res=unlist(strsplit(str_trim(x),"\n",fixed=TRUE))
+  #   res=str_trim(res)
+  #   res=res[nchar(res)>0]
+  #   # cat("\nres=")
+  #   #str(res)
+  #   res
+  # }
+  # 
+  # makeMediatorEq2=function(){
+  #   temp=""
+  #   if(length(input$XVars)*length(input$MVars)*length(input$YVars)==0) temp=""
+  #   else {
+  #     xvar=drop2str(input$XVars)
+  #     mvar=drop2str(input$MVars)
+  #     yvar=drop2str(input$YVars)
+  #     
+  #     temp=makeEquation(X=xvar,M=mvar,Y=yvar)
+  #   }     
+  #   temp
+  # }
+  # 
+  # observeEvent(input$MakeEquation2, {
+  #   
+  #   temp<-makeMediatorEq2()
+  #   if(temp=="") putmsg("Please Select Variables First")
+  #   else {
+  #     updateTextInput(session,"mediationEquation2",value=temp) 
+  #     
+  #   }  
+  #   
+  # })
+  # 
   observeEvent(input$reset, {
     updateTextInput(session,"equation",value="")
     updateSelectInput(session,"leftvar",selected="")
     updateSelectInput(session,"rightvar",selected="")
   })
   
+  observeEvent(input$resetMediation, {
+    updateTextInput(session,"mediationEquation",value="")
+    updateSelectInput(session,"indepvar",selected="")
+    updateSelectInput(session,"mediator",selected="")
+    updateSelectInput(session,"resvar",selected="")
+  })
+  
+  # observeEvent(input$resetMediation2, {
+  #   updateTextInput(session,"mediationEquation2",value="")
+  #   
+  # })
+  # 
   observeEvent(input$ResetEx, {
     updateTextInput(session,"equation",value="")
     updateSelectInput(session,"SelectEx",selected=0)
@@ -630,15 +795,16 @@ observe({
   
 output$dataHelp<-renderUI({
    
-       if(input$Example=="ADHD"){
-#          cath("Data Set fo Teacher's Intervention fo ADHD")
-#          cath("id: study identification number",5)
-#          cath("gender: male=1, female=2",5)
-#          cath("age: age groups 1-4",5)
-
-         includeMarkdown("ADHD.md")
-         
-       } else htmlOutput("dataHelpHTML")
+#        if(input$Example=="ADHD"){
+# #          cath("Data Set fo Teacher's Intervention fo ADHD")
+# #          cath("id: study identification number",5)
+# #          cath("gender: male=1, female=2",5)
+# #          cath("age: age groups 1-4",5)
+# 
+#          includeMarkdown("ADHD.md")
+#          
+#        } else
+         htmlOutput("dataHelpHTML")
    
      
 })   
@@ -873,9 +1039,16 @@ myfittext=function(group.equal=1){
 }
 
 myfit=function(group.equal=1){
-  temp=myfittext(group.equal=group.equal)
-  if(input$editAnalysis) fit=eval(parse(text=input$AnalysisOrder))   
-  else fit=eval(parse(text=temp))   
+  if(input$method=="matrixpls") {
+    
+    fit<-matrixpls::matrixpls(cov(df()),input$equation)
+    
+  } else {
+    temp=myfittext(group.equal=group.equal)
+    if(input$editAnalysis) fit=eval(parse(text=input$AnalysisOrder))   
+    else fit=eval(parse(text=temp))   
+  }
+ 
   fit
 }
 
@@ -955,7 +1128,7 @@ output$semText=renderPrint({
          
         #print(str(fit))
 
-        if((input$moderating)&(input$showcor)){
+        if((input$moderating)){
 #           cat("## Correlation analysis\n")
 #           tempdf=df()[,c(input$indepvar,input$mediator,input$resvar)]
 #           print(cor(tempdf))
@@ -1045,6 +1218,7 @@ output$semText=renderPrint({
 
 diagramTemp=function(DoNotPlot=FALSE){
   
+  if(input$plotOption2=='semPaths'){
   temp="semPaths(fit"
   if(length(input$what)!=0) temp=paste0(temp,",what='",plustext(input$what),"'")
   if(length(input$whatLabels)!=0) temp=paste0(temp,",whatLabels='",plustext(input$whatLabels),"'")
@@ -1063,12 +1237,33 @@ diagramTemp=function(DoNotPlot=FALSE){
   else temp=paste0(temp,",title=TRUE")
   if(input$Other!="") temp=paste0(temp,",",input$Other)
   temp=paste0(temp,",curveAdjacent=TRUE,ask=FALSE)")
+  } else{
+    temp="mediationPlot(fit"
+    if(input$maxx!=60) temp=paste0(temp,",maxx=",input$maxx)
+    if(input$maxy!=30) temp=paste0(temp,",maxy=",input$maxy)
+    if(input$whatLabels2!="std") temp=paste0(temp,",whatLabels='",input$whatLabels2,"'")
+    if(input$rectHeight!=3) temp=paste0(temp,",height=",input$rectHeight)
+    if(input$rectWidth!=5) temp=paste0(temp,",width=",input$rectWidth)
+    if(input$usecolor==FALSE) temp=paste0(temp,",usecolor=FALSE")
+    if(input$clean==FALSE) temp=paste0(temp,",clean=FALSE")
+    if(input$base_size!=5) temp=paste0(temp,",base_size=",input$base_size)
+    if(input$base_family!="NanumGothic") temp=paste0(temp,",base_family='",input$base_family,"'")
+    if(input$mediationOnly==TRUE) temp=paste0(temp,",mediationOnly=TRUE")
+    if(input$residuals2==FALSE) temp=paste0(temp,",residuals=FALSE")
+    else if(input$residuals2==TRUE) temp=paste0(temp,",residuals=TRUE")
+    if(input$regression==FALSE) temp=paste0(temp,",regression=FALSE")
+    if(input$indirect==TRUE) temp=paste0(temp,",indirect=TRUE")
+    if(input$secondIndirect==TRUE) temp=paste0(temp,",secondIndirect=TRUE")
+    
+    temp=paste0(temp,")")
+  }
   temp
 
 }
 
 diagramTemp0=function(DoNotPlot=FALSE){
   
+  if(input$plotOption2=='semPaths'){
   temp="semPaths(fit"
   if(input$what0!="paths") temp=paste0(temp,",what='",input$what0,"'")
   if(input$whatLabels0!="") temp=paste0(temp,",whatLabels='",input$whatLabels0,"'")
@@ -1087,7 +1282,13 @@ diagramTemp0=function(DoNotPlot=FALSE){
   else temp=paste0(temp,",title=TRUE")
   if(input$Other0!="") temp=paste0(temp,",",input$Other0)
   temp=paste0(temp,",curveAdjacent=TRUE,ask=FALSE)")
+  } else{
+    temp="mediationPlot(fit"
+    if(input$whatLabels2!="std") temp=paste0(temp,",whatLabels='",input$whatLabels,"'")
+    temp=paste0(temp,")")
+  }
   temp
+  
   
 }
 
@@ -1106,7 +1307,8 @@ mysemPlot=function(DoNotPlot=FALSE,which=0){
 #       diagram[[which]]$Arguments$DoNotPlot=FALSE
 #       qgraph::qgraph(diagram[[which]])
 #       
-#     } 
+#     }
+    diagram
     
   }
 }
@@ -1132,11 +1334,18 @@ output$SEMPlot=renderPlot({
 })
 
 output$Model.ui=renderUI({
-    if((input$preview) & (input$equation!=""))  plotOutput('ModelPlot',height=700)
+    tagList(
+    if((input$preview) & (input$equation!=""))  plotOutput('ModelPlot',height=700),
+    if((input$preview) & (input$equation2!=""))  plotOutput('ModelPlot2',height=700)
+    )
 })
 
 output$ModelPlot=renderPlot({
   if((input$preview) & (input$equation!=""))  mysemPlot()
+})
+
+output$ModelPlot2=renderPlot({
+  if((input$preview) & (input$equation2!=""))  mysemPlot2()
 })
 
 
@@ -1150,19 +1359,6 @@ output$SEMPlot2=renderPlot({
   })
 })
 
-# addggplot=function(mydoc,plot,title=""){
-#   mydoc=addSlide(mydoc,"Title and Content")
-#   mydoc=addTitle(mydoc,title)
-#   mydoc=addPlot(mydoc,fun=print,x=plot,vector.graphic=TRUE)
-#   mydoc
-# }
-# 
-# addplot=function(mydoc,plotfunction,title=""){
-#   mydoc=addSlide(mydoc,"Title and Content")
-#   mydoc=addTitle(mydoc,title)
-#   mydoc=addPlot(mydoc,function() {plotfunction},vector.graphic=TRUE)
-#   mydoc
-# }
 
 addplot=function(mydoc,plotfunction,title="",...){
   mydoc=addSlide(mydoc,"Title and Content")
@@ -1174,6 +1370,31 @@ addplot=function(mydoc,plotfunction,title="",...){
 addImageSlide=function(mydoc,image){
   mydoc=addSlide(mydoc,"Content")
   mydoc=addImage(mydoc,image)
+  mydoc
+}
+
+addggplot=function(mydoc,plot,title="",...){
+  if(title==""){
+    mydoc=addSlide(mydoc,"Content2")
+  } else{
+    mydoc=addSlide(mydoc,"Title and Content")
+    mydoc=addTitle(mydoc,title)
+  }
+  mydoc=addPlot(mydoc,fun=print,x=plot,vector.graphic=TRUE,...)
+  mydoc
+}
+
+addmyFlexTable=function(mydoc,flextable,title=""){
+ 
+    if(title==""){
+      mydoc=addSlide(mydoc,"Content2")
+    } else{
+      mydoc=addSlide(mydoc,"Title and Content")
+      mydoc=addTitle(mydoc,title)
+    }
+  
+  mydoc = addFlexTable(mydoc,flextable)  
+ 
   mydoc
 }
 
@@ -1189,7 +1410,7 @@ addqgraphPlot=function(mydoc,diagram,title="",...){
  # mydoc=addTitle(mydoc,title)
   gdiagram<<-diagram
   #if(input$pptfigformat=="png") 
-    mydoc=addPlot(mydoc,myqgraph,vector.graphic=input$pptvector,...)
+    mydoc=addPlot(mydoc,myqgraph,vector.graphic=TRUE,...)
     
 #   else {
 #     devEMF::emf(width=ifelse(input$pptformat=="normal",9.17,12.23),height=6.48)
@@ -1234,56 +1455,73 @@ addImageSlide=function(mydoc,image){
   mydoc
 }
 
+
 output$downloadPPT = downloadHandler(
   filename="R-sem.pptx",
   content=function(file){
-    
+
     # temporarily switch to the temp dir, in case you do not have write
     # permission to the current working directory
-    
+
     if(input$pptformat=="normal") mydoc=pptx(template="myppt.pptx")
     else mydoc=pptx(template="mywideppt.pptx")
     owd <- setwd(tempdir())
     on.exit(setwd(owd))
-    
+
     mydoc=addSlide(mydoc,"Title Slide")
     mydoc=addTitle(mydoc,"Results of SEM")
     mydoc=addSubtitle(mydoc,"prepared by r-sem.com")
-    
-    #fit<-myfit()    
+
+    #fit<-myfit()
     diagram<-mysemPlot(DoNotPlot=TRUE)
-    
+
     if(input$group=="") count=1
     else count=length(unique(df()[[input$group]]))
     if(count==1) {
+      if(input$plotOption2=="semPaths"){
         diagram$Arguments$DoNotPlot=FALSE
         mydoc=addqgraphPlot(mydoc,diagram)
-    }  
+      }else{
+        mydoc=addggplot(mydoc,diagram,width=input$plotWidth,height=input$plotHeight)
+      }
+    }
     else for(i in 1:count) {
       diagram[[i]]$Arguments$DoNotPlot=FALSE
       #qgraph::qgraph(diagram[[i]])
       title=paste0(input$group,"=",i)
       mydoc=addqgraphPlot(mydoc,diagram[[i]],title=title)
       mydoc
-    }  
+    }
     if(input$equation2!=""){
       diagram2<-mysemPlot2(DoNotPlot=TRUE)
-      
+
       if(input$group=="") count=1
       else count=length(unique(df()[[input$group]]))
       if(count==1) {
+        if(input$plotOption2=="semPaths"){
         diagram2$Arguments$DoNotPlot=FALSE
         mydoc=addqgraphPlot(mydoc,diagram2)
-      }  
+        } else{
+          mydoc=addggplot(mydoc,diagram2,width=input$plotWidth,height=input$plotHeight)
+
+        }
+      }
       else for(i in 1:count) {
         diagram2[[i]]$Arguments$DoNotPlot=FALSE
         #qgraph::qgraph(diagram[[i]])
         title=paste0(input$group,"=",i)
         mydoc=addqgraphPlot(mydoc,diagram2[[i]],title=title)
         mydoc
-      }    
-    
+      }
+
     }
+    mydoc=addmyFlexTable(mydoc, alphaTable_sub(),title="Cronbach's alpha")
+    mydoc=addmyFlexTable(mydoc,  corTable_sub(),title="Correlations among measured variables")
+    mydoc=addggplot(mydoc,corPlot_sub(size=3),title="Correlation Plot")
+    mydoc=addmyFlexTable(mydoc, modelfitTable_sub(mode="pptx"),title="Model fitness index")
+    mydoc=addmyFlexTable(mydoc,  estTable_sub(mode="pptx"),title="Estimates in the model")
+    if(input$moderating)
+    mydoc=addmyFlexTable(mydoc, mediationTable_sub(mode="pptx"),title="Summary of mediation effects")
     writeDoc(mydoc,file=file)
     #zip(zipfile=file,files=c("R-Meta.pptx"))
   },
@@ -1327,17 +1565,26 @@ output$downloadPlot = downloadHandler(
     
     if(count==1) {
        
-       temp=paste0("semplot.",input$plotformat)
-       temporder=paste0(input$plotformat,"('",temp,"',width=",plotwidth,
-                        ",height=",plotheight,")")
-       eval(parse(text=temporder))
-       diagram$Arguments$DoNotPlot=FALSE
-       qgraph::qgraph(diagram)
-      dev.off()
+      temp=paste0("semplot.",input$plotformat)
+       if(input$plotOption2=="semPaths"){
+         
+         temporder=paste0(input$plotformat,"('",temp,"',width=",plotwidth,
+                          ",height=",plotheight,")")
+         eval(parse(text=temporder))
+         diagram$Arguments$DoNotPlot=FALSE
+         qgraph::qgraph(diagram)
+         dev.off()
+       } else {
+         if(input$plotformat!="pdf") ggsave(temp,plot=diagram,width=input$plotWidth,height=input$plotHeight,units="in")
+         else ggsave(temp,plot=diagram,device=cairo_pdf,width=input$plotWidth,height=input$plotHeight,units="in")
+         
+       }
+      
       fs=c(fs,temp)
     }    
     else lapply(1:count,function(k) {
         temp=paste0("semplot",k,".",input$plotformat)
+        if(input$plotOption2=='semPaths'){
        temporder=paste0(input$plotformat,"('",temp,"',width=",plotwidth,
                                ",height=",plotheight,")")
         #putmsg(temporder)
@@ -1347,6 +1594,11 @@ output$downloadPlot = downloadHandler(
         qgraph::qgraph(diagram[[k]])
         title(paste0(input$group,"=",k))
         dev.off()
+        } else{
+          if(input$plotformat!="pdf") ggsave(temp,plot=diagram,width=input$plotWidth,height=input$plotHeight,units="in")
+          else ggsave(temp,plot=diagram,device=cairo_pdf,width=input$plotWidth,height=input$plotHeight,units="in")
+          
+        }
         fs<<-c(fs,temp)
     })
    if(input$equation2!=""){
@@ -1356,12 +1608,17 @@ output$downloadPlot = downloadHandler(
      else count=length(unique(df()[[input$group]]))
      if(count==1) {
        temp=paste0("semplot2.",input$plotformat)
+       if(input$plotOption2=="semPaths"){
        temporder=paste0(input$plotformat,"('",temp,"',width=",plotwidth,
                         ",height=",plotheight,")")
        eval(parse(text=temporder))
        diagram2$Arguments$DoNotPlot=FALSE
        qgraph::qgraph(diagram2)
        dev.off()
+       } else{
+         if(input$plotformat!="pdf") ggsave(temp,plot=diagram2,width=input$plotWidth,height=input$plotHeight,units="in")
+         else ggsave(temp,plot=diagram2,device=cairo_pdf,width=input$plotWidth,height=input$plotHeight,units="in")
+       }
        fs=c(fs,temp)
      }  
      else lapply(1:count,function(k) {
@@ -1422,6 +1679,7 @@ observeEvent(input$resetinspect,{
     choices=c("matrices","data","stats","features","samplestats","optimizer",
               "infmatrices","varcovpar","misc")
     for(i in 1:length(choices)) updateSelectInput(session,choices[i],selected="none")
+
 })
 
 output$inspect.ui=renderUI({
@@ -1463,6 +1721,153 @@ output$inspecttext=renderPrint({
      }
    })
 })
+
+output$tableui=renderUI({
+  if(input$equation!=""){
+    tagList(
+       htmlOutput("alpha"),
+       tableOutput("alphaTable"),
+       htmlOutput("correlation"),
+       tableOutput("corTable"),
+       h3("Correlation Plot"),
+       plotOutput("corPlot"),
+       htmlOutput("modfit"),
+       tableOutput("modelfitTable"),
+       checkboxInput("showcriteria","show criteria",value=FALSE),
+       conditionalPanel(condition="input.showcriteria==true",
+                        tableOutput("modelfitTable2")
+                        ),
+       htmlOutput("estimate"),
+       tableOutput("estTable"),
+       if(input$moderating) htmlOutput("mediation"),
+       if(input$moderating) tableOutput("mediationTable")
+    )
+  }
+})
+
+
+alphaTable_sub=function(no=1){
+
+  if(no==1) fit<-myfit()
+  else if(no==2) fit<-myfit2()
+ 
+  result=fit2alpha(fit)
+  df2Flextable(result,vanilla=input$vanilla,width=c(2,4,1.5,1.5))
+}
+
+output$alphaTable=renderFlexTable({
+  
+  alphaTable_sub()
+  
+})
+
+
+corTable_sub=function(no=1){
+
+  if(no==1) fit<-myfit()
+  else if(no==2) fit<-myfit2()
+ 
+  corTable(fit,vanilla=input$vanilla)
+  
+}
+
+output$corTable=renderFlexTable({
+  
+  corTable_sub()
+  
+})
+
+
+corPlot_sub=function(no=1,...){
+
+  if(no==1) fit<-myfit()
+  else if(no==2) fit<-myfit2()
+
+  corPlot(fit,...)
+  
+}
+
+output$corPlot=renderPlot({
+  
+  corPlot_sub()
+  
+})
+
+
+modelfitTable_sub=function(no=1,mode="html"){
+
+  if(no==1) fit<-myfit()
+  else if(no==2) fit<-myfit2()
+  
+  result=modelFitTable(fit)
+  df2Flextable(result,vanilla=input$vanilla,widths=c(rep(0.5,10),2,1,1),mode=mode)
+}
+
+output$modelfitTable=renderFlexTable({
+  
+  modelfitTable_sub()
+  
+})
+
+modelfitTable2_sub=function(no=1,mode="html"){
+  
+  x2df="< 3"
+  p="> 0.05"
+  CFI="> 0.9"
+  GFI="> 0.9"
+  AGFI="> 0.9"
+  TLI="> 0.9"
+  RMR="< 0.05"
+  SRMR="< 0.05"
+  RMESA="< 0.1(< 0.05)"
+  AIC="the lower, the better"
+  BIC="the lower, the better"
+  result=data.frame(x2df,p,CFI,GFI,AGFI,TLI,RMR,SRMR,RMESA,AIC,BIC)
+  df2Flextable(result,vanilla=input$vanilla,mode=mode)
+}
+
+
+output$modelfitTable2=renderFlexTable({
+  
+  modelfitTable2_sub()
+  
+})
+
+
+
+estTable_sub=function(no=1,mode="html"){
+
+  if(no==1) fit<-myfit()
+  else if(no==2) fit<-myfit2()
+
+  result=estimatesTable(fit,ci=TRUE)
+  df2Flextable(result,vanilla=input$vanilla,mode=mode)
+  
+}
+
+output$estTable=renderFlexTable({
+  
+  estTable_sub()
+})
+
+
+mediationTable_sub=function(no=1,mode="html"){
+
+  if(no==1) fit<-myfit()
+  else if(no==2) fit<-myfit2()
+
+  result=estimatesTable(fit,mediation=TRUE,ci=TRUE)
+  MyTable=df2Flextable(result,vanilla=input$vanilla,mode=mode)
+  MyTable[result$Variables=='indirect effect',,side='top']=chprop(borderProperties(style='solid'))
+  MyTable
+}
+
+output$mediationTable=renderFlexTable({
+  
+  mediationTable_sub()
+  
+})
+
 
 })
 

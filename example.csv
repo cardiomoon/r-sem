@@ -40,6 +40,10 @@ intervention ~ b*empathy + c*knowledge
 empathy ~ a*knowledge
 indirect effect:=a*b
 total effect:=c+(a*b)",sem
-,,,,
-,,,,
-,,,,
+childhood,childhood,childhood,"업무스트레스=~스트레스_원아+스트레스_업무
+동료스트레스=~스트레스_교사+스트레스_원장
+기타스트레스=~스트레스_학부모+스트레스_보수
+교육효능감=~학습지도+보육과정
+조직효능감=~조직운영+의사소통
+일시적몰입=~정서적몰입
+제도적몰입=~지속적몰입+규범적몰입",sem

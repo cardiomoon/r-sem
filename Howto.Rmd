@@ -1,0 +1,49 @@
+---
+title: "Howto"
+author: Keon-Woong Moon
+date: "`r Sys.time()`"
+documentclass: book
+fontsize: 10pt
+output:
+  pdf_document:
+    includes:
+      in_header: header5e.tex
+    toc: yes
+    number_sections: FALSE
+    toc_depth: 3
+  html_document:
+    toc: yes
+geometry: margin=1in
+classoption: b5paper
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+```{r, child='Howto1.Rmd',cache=FALSE}
+
+```
+```{r, child='Howto2.md',cache=FALSE}
+
+```
+```{r, child='Howto3.md',cache=FALSE}
+
+```
+```{r, child='Howto4.md',cache=FALSE}
+
+```
+```{r, child='Howto5.md',cache=FALSE}
+
+```
+```{r, child='Howto6.md',cache=FALSE}
+
+```
+```{r, child='Howto7.md',cache=FALSE}
+
+```
+```{r, child='Howto8.md',cache=FALSE}
+
+```
+
