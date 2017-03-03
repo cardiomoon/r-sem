@@ -16,18 +16,18 @@ All you need for this app is a modern web browser supporting HTML5(chrome, opera
 
 At present, I maintained six servers. You can choose any server among followings. Please find the nearest server and ejoy the app.
 
-App    | Sinapore,SG|Frankfurt,DE|London,UK|Fremont,CA|Dallas,TX|Newark,NJ|
--------|------------|------------|---------|----------|---------|---------|
-r-sem  |  [r-sem](http://45.118.135.113:3838/r-sem)| [r-sem](http://85.90.244.159:3838/r-sem)|[r-sem](http://88.80.188.114:3838/r-sem)|[r-sem](http://198.74.50.54:3838/r-sem)|[r-sem](http://23.239.25.35:3838/r-sem)|[r-sem](http://45.79.141.61:3838/r-sem)
+App    | Sinapore,SG|Frankfurt,DE|London,UK|Fremont,CA|Dallas,TX|Newark,NJ|Tokyo 2, JP|
+-------|------------|------------|---------|----------|---------|---------|-----------|
+r-sem  |  [r-sem](http://45.118.135.113:3838/r-sem)| [r-sem](http://85.90.244.159:3838/r-sem)|[r-sem](http://88.80.188.114:3838/r-sem)|[r-sem](http://198.74.50.54:3838/r-sem)|[r-sem](http://23.239.25.35:3838/r-sem)|[r-sem](http://45.79.141.61:3838/r-sem)|[r-sem](http://139.162.67.22:3838/r-sem)|[r-sem](http://139.162.67.22/r-sem)
 
 ## Othe Apps created by web-r.org
 
 You can find other useful apps created by me. One of these, you can perform meta-analysis by the mata app.
 
 
-App    | Sinapore,SG|Frankfurt,DE|London,UK|Fremont,CA|Dallas,TX|Newark,NJ|
--------|------------|------------|---------|----------|---------|---------|
-r-meta  | [r-meta](http://45.118.135.113:3838/meta)|[r-meta](http://85.90.244.159:3838/meta)|[r-meta](http://88.80.188.114:3838/meta)|[r-meta](http://198.74.50.54:3838/meta)|[r-meta](http://23.239.25.35:3838/meta)|[r-meat](http://45.79.141.61:3838/meta)
+App    | Sinapore,SG|Frankfurt,DE|London,UK|Fremont,CA|Dallas,TX|Newark,NJ|Tokyo 2, JP|
+-------|------------|------------|---------|----------|---------|---------|-----------|
+r-meta  | [r-meta](http://45.118.135.113:3838/meta)|[r-meta](http://85.90.244.159:3838/meta)|[r-meta](http://88.80.188.114:3838/meta)|[r-meta](http://198.74.50.54:3838/meta)|[r-meta](http://23.239.25.35:3838/meta)|[r-meat](http://45.79.141.61:3838/meta)|[r-meat](http://139.162.67.22:3838/meta)
 
 
 ## Coming soon
