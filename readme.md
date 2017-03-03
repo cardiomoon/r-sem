@@ -27,7 +27,7 @@ You can find other useful apps created by me. One of these, you can perform meta
 
 App    | Sinapore,SG|Frankfurt,DE|London,UK|Fremont,CA|Dallas,TX|Newark,NJ|Tokyo 2, JP|
 -------|------------|------------|---------|----------|---------|---------|-----------|
-r-meta  | [r-meta](http://45.118.135.113:3838/meta)|[r-meta](http://85.90.244.159:3838/meta)|[r-meta](http://88.80.188.114:3838/meta)|[r-meta](http://198.74.50.54:3838/meta)|[r-meta](http://23.239.25.35:3838/meta)|[r-meat](http://45.79.141.61:3838/meta)|[r-meat](http://139.162.67.22:3838/meta)
+r-meta  | [r-meta](http://45.118.135.113:3838/meta)|[r-meta](http://85.90.244.159:3838/meta)|[r-meta](http://88.80.188.114:3838/meta)|[r-meta](http://198.74.50.54:3838/meta)|[r-meta](http://23.239.25.35:3838/meta)|[r-meta](http://45.79.141.61:3838/meta)|[r-meta](http://139.162.67.22:3838/meta)
 
 
 ## Coming soon
