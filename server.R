@@ -13,6 +13,7 @@ require(rhandsontable)
 require(ReporteRs)
 require(lavaan)
 require(semPlot)
+require(semTools)
 require(extrafont)
 #require(matrixpls)
 require(semMediation)
@@ -20,9 +21,12 @@ require(ggplot2)
 #require(shinyDND)
 require(stringr)
 require(mycor)
+require(dplyr)
+require(moonBook)
 #require(shinyTree)
 
 source("cleaning.R")
+source("chooser.R")
 
 
 #loadfonts()
@@ -100,7 +104,8 @@ shinyServer(function(input, output,session) {
     file2ext=function(filename){
         namelist=unlist(strsplit(filename,".",fixed=TRUE))
         result=namelist[length(namelist)]
-        if((result=="csv")|(result=="xlsx")) return(result)
+        result=tolower(result)
+        if((result=="csv")|(result=="xlsx")|(result=="rds")) return(result)
         else return(NULL)
     }
     
@@ -123,7 +128,7 @@ shinyServer(function(input, output,session) {
         result=NULL
         if(is.null(ext)) {
             session$sendCustomMessage(type = 'testmessage',
-                                      message = list( 'Only file with xlsx or csv format is supported.'))
+                                      message = list( 'Only file with xlsx or csv or RDS format is supported.'))
         } else if(ext=="csv") {
             try(result<-read.csv(file$datapath,header=TRUE,stringsAsFactors = FALSE),silent=TRUE)
             if(is.null(result)) {
@@ -131,7 +136,10 @@ shinyServer(function(input, output,session) {
                 if(is.null(result)) session$sendCustomMessage(type = 'testmessage',
                                                       message = list( 'File read error : please check file encoding')) 
             }
-        }  else {
+        }  else if(ext=="rds"){
+            result=readRDS(file$datapath)
+            result=data.frame(result)
+        } else{
             newname=file2newname(file)
             file.copy(file$datapath,newname)
             result=read_excel(newname)
@@ -262,36 +270,43 @@ shinyServer(function(input, output,session) {
   setwd(currentdir)
   setHot=function(x) values[["Hot"]]=x
   
-   origin=reactive({
+  observeEvent(input$Example,{
+      if(input$Example=="uploaded_file") updateTextInput(session,"mydata",value="uploaded")
+      else updateTextInput(session,"mydata",value=input$Example)
+  }) 
+  
+  origin=reactive({
        
-       if(input$Example=="uploaded_file") {
+       if(input$mydata=="uploaded") {
            if(is.null(input$file)) {
                if(input$language=="en") putmsg("Please upload file first !")
                else putmsg("먼저 file을 업로드하세요 !")   
                
-               df<-ADHD
+               df<-HolzingerSwineford1939
                updateRadioButtons(session,"Example",
                                  selected="HolzingerSwineford1939")
+               updateTextInput(session,"mydata",
+                                  value="HolzingerSwineford1939")
            }            
            else df<-my_readfile(input$file) 
        }           
        else {
-         is.csv=grep(".csv",input$Example)
-         if(length(is.csv)==0) df=eval(parse(text=input$Example))
-         else df<-read.csv(paste("data/",input$Example,sep=""),stringsAsFactors = FALSE)
+         is.csv=grep(".csv",input$mydata)
+         if(length(is.csv)==0) df=eval(parse(text=input$mydata))
+         else df<-read.csv(paste("data/",input$mydata,sep=""),stringsAsFactors = FALSE)
        
        }   
-       values$choice=input$Example
+       values$choice=input$mydata
        values$new<-TRUE
 
        df
    })
    
    data=reactive({
-       temp<-input$Example
+       temp<-input$mydata
        if(is.null(input$hot)) DF=origin()
        else {
-           if((current=="")|(current==input$Example)){
+           if((current=="")|(current==input$mydata)){
               current<<-temp
               DF=hot_to_r(input$hot)
          
@@ -1182,11 +1197,18 @@ output$semText=renderPrint({
          }   
          if(input$method=="cfa"){
              cat("\n\n## Average Variance Extracted \n\n")
-             loadMatrix <- inspect(fit, "std")$lambda
-             loadMatrix[loadMatrix==0] <- NA
-             AVE=apply(loadMatrix^2,2,mean, na.rm = TRUE)
-             result=data.frame(AVE=AVE,SQRTAVE=sqrt(AVE))
-             print(result)
+             # loadMatrix <- inspect(fit, "std")$lambda
+             # loadMatrix[loadMatrix==0] <- NA
+             # AVE=apply(loadMatrix^2,2,mean, na.rm = TRUE)
+             # 
+             # l=inspect(fit,"coef")$lambda
+             # v<-diag(inspect(fit,"coef")$theta)
+             # cr=sum(l)^2/(sum(l)^2+sum(v))
+             # 
+             # result=data.frame(AVE=AVE,SQRTAVE=sqrt(AVE))
+             # 
+             # print(result)
+             print(semTools::reliability(fit))
          }
       
       }
@@ -1517,6 +1539,8 @@ output$downloadPPT = downloadHandler(
     }
     mydoc=addmyFlexTable(mydoc, alphaTable_sub(),title="Cronbach's alpha")
     mydoc=addmyFlexTable(mydoc,  corTable_sub(),title="Correlations among measured variables")
+    mydoc=addmyFlexTable(mydoc,  reliabilityTable_sub(),title= "Reliability & Validity")
+    mydoc=addmyFlexTable(mydoc,   discriminantValidityTable_sub(),title= "Discriminant Validity")
     mydoc=addggplot(mydoc,corPlot_sub(size=3),title="Correlation Plot")
     mydoc=addmyFlexTable(mydoc, modelfitTable_sub(mode="pptx"),title="Model fitness index")
     mydoc=addmyFlexTable(mydoc,  estTable_sub(mode="pptx"),title="Estimates in the model")
@@ -1727,6 +1751,10 @@ output$tableui=renderUI({
     tagList(
        htmlOutput("alpha"),
        tableOutput("alphaTable"),
+       htmlOutput("reliable"),
+       tableOutput("reliabilityTable"),
+       htmlOutput("discrim"),
+       tableOutput("discriminantValidityTable"),
        htmlOutput("correlation"),
        tableOutput("corTable"),
        h3("Correlation Plot"),
@@ -1743,6 +1771,71 @@ output$tableui=renderUI({
        if(input$moderating) tableOutput("mediationTable")
     )
   }
+})
+
+output$reliable=renderPrint({
+  if(input$language=="kor") {
+    h3("신뢰성, 타당성")
+  } else {
+    h3("Reliability & Validity")
+  }
+})
+
+reliabilityTable_sub=function(no=1){
+  
+  if(no==1) fit<-myfit()
+  else if(no==2) fit<-myfit2()
+  
+  result=semTools::reliability(fit)
+  result=rbind(result,sqrtave=sqrt(result[5,]))
+  df=as.data.frame(round(t(result),3))
+  colnames(df)[5]="AVE"
+  colnames(df)[6]="sqrt(AVE)"
+  df$Reliablity=(df$omega>=0.7)&(df$alpha>=0.7)
+  df$convergenceValidity=df$AVE>=0.5
+  df2Flextable(df,add.rownames=TRUE,vanilla=input$vanilla,width=c(1,1,1,1,1,1,1.5,1.5,1.5))
+}
+
+output$reliabilityTable=renderFlexTable({
+  reliabilityTable_sub()
+})
+
+output$discrim=renderPrint({
+  if(input$language=="kor") {
+    h3("판별타당성")
+  } else {
+    h3("Discriminant Validity")
+  }
+})
+
+discriminantValidityTable_sub=function(no=1){
+  if(no==1) fit<-myfit()
+  else if(no==2) fit<-myfit2()
+  
+  result=semTools::reliability(fit)
+  result=rbind(result,sqrtave=sqrt(result[5,]))
+  result
+  df=as.data.frame(t(result[,-ncol(result)]))
+  df
+  colnames(df)[5]="AVE"
+  colnames(df)[6]="sqrt(AVE)"
+  result1=inspect(fit,"cor.lv")
+  diag(result1)<-NA
+  
+  discriminantValidity<-df[[6]]>apply(result1,1,max,na.rm=TRUE)
+  #discriminantValidity
+  diag(result1)<-1
+  rdf=as.data.frame(result1)
+  
+  result=cbind(rdf,df[5:6])
+  result=round(result,3)
+  result=cbind(result,discriminantValidity)
+  result
+  df2Flextable(result,add.rownames = TRUE,vanilla=input$vanilla)
+}
+
+output$discriminantValidityTable=renderFlexTable({
+  discriminantValidityTable_sub()
 })
 
 
@@ -1868,6 +1961,663 @@ output$mediationTable=renderFlexTable({
   
 })
 
+
+##### Preprocessing with Chooser ###
+
+observeEvent(input$calSum,{
+  rightchoices=input$mychooser$right
+  
+  if(length(rightchoices)<2) {
+    putmsg("select more than one column")
+  } else {
+    mydf=df()
+    selected=sapply(mydf[rightchoices],is.numeric)
+    mydf[[input$newname]]=rowSums(mydf[rightchoices][selected])
+    if(sum(!selected)>0) putmsg(paste0("Excluded: ",names(selected[selected==FALSE])))
+    
+    
+    if(input$mydata=="added") {
+      added1<<-mydf
+      updateTextInput(session,"mydata",value="added1")
+    } else {
+      added<<-mydf  
+      updateTextInput(session,"mydata",value="added")
+    }
+  }
+})
+
+observeEvent(input$calMean,{
+  rightchoices=input$mychooser$right
+  if(length(rightchoices)<2) {
+    putmsg("select more than one column")
+  } else {
+    mydf=df()
+    selected=sapply(mydf[rightchoices],is.numeric)
+    mydf[[input$newname]]=rowSums(mydf[rightchoices][selected])/sum(selected)
+    if(sum(!selected)>0) putmsg(paste0("Excluded: ",names(selected[selected==FALSE])))
+    
+    if(input$mydata=="mutated") {
+      mutated1<<-mydf
+      updateTextInput(session,"mydata",value="mutated1")
+    } else {
+      mutated<<-mydf  
+      updateTextInput(session,"mydata",value="mutated")
+    }
+    
+  }
+})
+
+observeEvent(input$recodeRank,{
+  rightchoices=input$mychooser$right
+  if(length(rightchoices)<1) {
+     putmsg("select one or more column")
+  } else {
+    mydf=df()
+    
+    for(i in 1:length(rightchoices)){
+      if(is.numeric(mydf[[rightchoices[i]]])){
+        mydf[[paste0(rightchoices[i],"_recode")]]=max(mydf[[rightchoices[i]]])-mydf[[rightchoices[i]]]+min(mydf[[rightchoices[i]]])
+      } else{
+        putmsg(paste0("You can recode numeric variable(s) only",name=rightchoices[i]))
+      }
+    }
+    
+    if(input$mydata=="recoded") {
+      recoded1<<-mydf
+      updateTextInput(session,"mydata",value="recoded1")
+    } else {
+      recoded<<-mydf  
+      updateTextInput(session,"mydata",value="recoded")
+    }
+    
+  }
+})
+
+observeEvent(input$standardize,{
+  rightchoices=input$mychooser$right
+  if(length(rightchoices)<1) {
+    putmsg("select one or more column")
+  } else {
+    mydf=df()
+    
+    for(i in 1:length(rightchoices)){
+      if(is.numeric(mydf[[rightchoices[i]]])){
+        mydf[[paste0(rightchoices[i],"_std")]]=(mydf[[rightchoices[i]]]-mean(mydf[[rightchoices[i]]]))/sd(mydf[[rightchoices[i]]])
+      } else{
+        putmsg(paste0("You can standardize numeric variable(s) only",name=rightchoices[i]))
+      }
+    }
+    
+    if(input$mydata=="std") {
+      std1<<-mydf
+      updateTextInput(session,"mydata",value="std1")
+    } else {
+      std<<-mydf  
+      updateTextInput(session,"mydata",value="std")
+    }
+    
+  }
+})
+
+observeEvent(input$deleteCol,{
+  rightchoices=input$mychooser$right
+  if(length(rightchoices)<1) {
+    putmsg("Select one or more column")
+  } else {
+    mydf=df()
+    
+    mydf<-mydf[,-which(names(mydf) %in% rightchoices)]
+    
+    if(input$mydata=="deleted") {
+      deleted1<<-mydf
+      updateTextInput(session,"mydata",value="deleted1")
+    } else {
+      deleted<<-mydf  
+      updateTextInput(session,"mydata",value="deleted")
+    }
+    
+  }
+})
+
+observeEvent(input$calculateCol,{
+  
+  if(input$calText=="") {
+    putmsg("Please enter equation !")
+  } else {
+    mydf=df()
+    
+    mydf<-tryCatch(eval(parse(text=paste0("dplyr::mutate(mydf,",input$calText,")"))),error=function(e) "error")
+    if(class(mydf)=="data.frame"){
+    
+    if(input$mydata=="mutated") {
+      mutated1<<-mydf
+      updateTextInput(session,"mydata",value="mutated1")
+    } else {
+      mutated<<-mydf  
+      updateTextInput(session,"mydata",value="mutated")
+    }
+    } else{
+      putmsg("Error in equation !")
+    }
+    
+  }
+})
+
+
+observeEvent(input$applyFilter,{
+  
+  if(input$filterText=="") {
+    putmsg("Please enter condition !")
+  } else {
+    mydf=df()
+    
+    mydf<-tryCatch(eval(parse(text=paste0("dplyr::filter(mydf,",input$filterText,")"))),error=function(e) "error")
+    if(class(mydf)=="data.frame"){
+      
+      if(input$mydata=="filtered") {
+        filtered1<<-mydf
+        updateTextInput(session,"mydata",value="filtered1")
+      } else {
+        filtered<<-mydf  
+        updateTextInput(session,"mydata",value="filtered")
+      }
+    } else{
+      putmsg("Error in condition !")
+    }
+    
+  }
+})
+
+observeEvent(input$selectCol,{
+  
+  rightchoices=input$mychooser$right
+  if(length(rightchoices)<1) {
+    session$sendCustomMessage(type = 'testmessage',
+                              message = list("select one or more column"))
+  } else {
+    
+    mydf=df()
+    temp=paste0("dplyr::select(mydf,c(",Reduce(pastecomma,rightchoices),"))")
+    mydf<-tryCatch(eval(parse(text=temp)),error=function(e) "error")
+    #putmsg(temp)
+    if(class(mydf)=="data.frame"){
+      
+      if(input$mydata=="selected") {
+        selected1<<-mydf
+        updateTextInput(session,"mydata",value="selected1")
+      } else {
+        selected<<-mydf  
+        updateTextInput(session,"mydata",value="selected")
+      }
+    } else{
+      putmsg("Error in condition !")
+    }
+    
+  }
+})
+
+observeEvent(input$summarySEGroup,{
+  
+  rightchoices=input$mychooser$right
+  if(length(rightchoices)==0) {
+    putmsg("Please select a column!")
+  } else if(length(rightchoices)>1) {
+    putmsg("Please select one column only!")
+  } else if(length(input$summaryGroup)<1) {
+    putmsg("Please select group(s) !")
+  } else {
+    mydf=df()
+    temp=paste0("ggiraphExtra::summarySE(mydf,measurevar='",
+                rightchoices,"',groupvars=",vector2str(input$summaryGroup),")")
+    mydf<-tryCatch(eval(parse(text=temp)),error=function(e) temp)
+    if(class(mydf)=="data.frame"){
+      
+      if(input$mydata=="summarized") {
+        summarized1<<-mydf
+        updateTextInput(session,"mydata",value="summarized1")
+      } else {
+        summarized<<-mydf  
+        updateTextInput(session,"mydata",value="summarized")
+      }
+    } else{
+      putmsg(temp)
+    }
+    
+  }
+})
+
+
+
+observeEvent(input$renameCol,{
+  rightchoices=input$mychooser$right
+  if(length(rightchoices)==0) {
+    putmsg("Please select a column!")
+  } else if(length(rightchoices)>1) {
+    putmsg("Please select one column only!")
+  }  else if(input$newname==""){
+    putmsg("Please enter new column name !")
+  } else {
+    mydf=df()
+    
+    names(mydf)[names(mydf)==rightchoices]<-input$newname  
+    if(input$mydata=="renamed") {
+      renamed1<<-mydf
+      updateTextInput(session,"mydata",value="renamed1")
+    } else {
+      renamed<<-mydf  
+      updateTextInput(session,"mydata",value="renamed")
+    }
+    
+    
+  }
+  
+  
+})
+
+
+observeEvent(input$makeFactorCol,{
+  mydf=df()
+  rightchoice=input$mychooser$right
+  choices=sort(unique(mydf[[rightchoice]]))
+  count=length(choices)
+  names=paste0("var",1:count)
+  
+  
+  temp=paste0("dplyr::mutate(mydf,",rightchoice,"=factor(",rightchoice)
+  if(length(input$factorColOrder)==count){
+    
+    temp=paste0(temp,",levels=",vector2str(input$factorColOrder))
+  }
+  temp=paste0(temp,"))")
+  #putmsg(temp)
+  mydf<-eval(parse(text=temp))
+  if(input$mydata=="mutated") {
+    mutated1<<-mydf
+    updateTextInput(session,"mydata",value="mutated1")
+  } else {
+    mutated<<-mydf  
+    updateTextInput(session,"mydata",value="mutated")
+  }
+})
+
+observeEvent(input$recode,{
+  mydf=df()
+  rightchoice=input$mychooser$right
+  choices=sort(unique(mydf[[rightchoice]]))
+  count=length(choices)
+  names=paste0("var",1:count)
+  
+  
+  temp=paste0("`",choices[1],"`='",input[[names[1]]],"'")
+  if(count>1) {
+    for(i in 2:count){
+      temp=paste0(temp,",`",choices[i],"`='",input[[names[i]]],"'")
+    }
+  } 
+  temp=paste0("dplyr::recode(mydf[[rightchoice]],",temp,")")
+  #putmsg(temp)
+  mydf[[rightchoice]]<-eval(parse(text=temp))
+  
+  
+  if(input$mydata=="mutated") {
+    mutated1<<-mydf
+    updateTextInput(session,"mydata",value="mutated1")
+  } else {
+    mutated<<-mydf  
+    updateTextInput(session,"mydata",value="mutated")
+  }
+  
+})
+
+output$factorColUI=renderUI({
+  mydf=df()
+  rightchoice=input$mychooser$right
+  maxfactorno=6
+  if(length(rightchoice)==1){
+    choices=sort(unique(mydf[[rightchoice]]))
+    count=length(choices)
+    if(count<=maxfactorno){
+      names=paste0("var",1:count)
+      input_list<-lapply(1:count,function(i){
+        textInput2(names[i],choices[i],value=choices[i])
+      })
+      myinput_list=list(
+        fluidRow(
+          column(8,
+                 h4("Encode as a factor"),
+                 selectInput("factorColOrder","Specify the order(if omitted, alphabetical order)",choices=choices,multiple=TRUE),
+                 h4("Recode: Rename the code"),
+                 input_list),
+          column(3,
+                 hr(),
+                 hr(),
+                 actionButton("makeFactorCol","Make a Factor",icon=icon("object-group"),width="150px"),
+                 hr(),
+                 actionButton("recode","Recode",icon=icon("gears"),width="150px")
+          )
+        )
+      )
+      do.call(tagList,myinput_list)
+    }
+  }
+})
+
+mycut=function(x,breaks,addmargins=TRUE,...){
+  if(addmargins){
+    temp=min(x,na.rm=TRUE)
+    if(temp<min(breaks)) breaks=c(temp,breaks)
+    temp=max(x,na.rm=TRUE)
+    if(temp>max(breaks)) breaks=c(breaks,temp)
+  }
+  cut(x,breaks=breaks,...)
+}
+observeEvent(input$makeSubset,{
+  mydf=df()
+  rightchoice=input$mychooser$right
+  if(input$newname!="") newname=input$newname
+  else newname=paste0(rightchoice,"Group")
+  
+  temp=""
+  if(input$kgroups!="") temp=paste0("dplyr::mutate(mydf,",newname,"=rank2group(mydf[[rightchoice]],",input$kgroups,"))")
+  else if(input$cutpoints!=""){
+    temp=paste0("dplyr::mutate(mydf,",newname,"=mycut(mydf[[rightchoice]],breaks=c(",input$cutpoints,")))")
+  }
+  if(temp!=""){
+    mydf<-eval(parse(text=temp))
+    if(input$mydata=="ranked") {
+      ranked1<<-mydf
+      updateTextInput(session,"mydata",value="ranked1")
+    } else {
+      ranked<<-mydf  
+      updateTextInput(session,"mydata",value="ranked")
+    }
+  }
+})
+
+observeEvent(input$deleteCol,{
+  rightchoices=input$mychooser$right
+  if(length(rightchoices)<1) {
+    putmsg("Select one or more column")
+  } else {
+    mydf=df()
+    
+    mydf<-mydf[,-which(names(mydf) %in% rightchoices)]
+    
+    if(input$mydata=="deleted") {
+      deleted1<<-mydf
+      updateTextInput(session,"mydata",value="deleted1")
+    } else {
+      deleted<<-mydf  
+      updateTextInput(session,"mydata",value="deleted")
+    }
+    
+  }
+})
+output$Grouping=renderUI({
+  mydf=df()
+  rightchoice=input$mychooser$right
+  maxfactorno=6
+  if(length(rightchoice)==1){
+    choices=sort(unique(mydf[[rightchoice]]))
+    count=length(choices)
+    if(is.numeric(mydf[[rightchoice]]) &(count>maxfactorno)){
+      tagList(
+        fluidRow(
+          column(8,
+                 h4(paste0("Make subsets by ",rightchoice)),
+                 textInput3("cutpoints","cut points",
+                            placeholder=Reduce(pastecomma,quantile(mydf[[rightchoice]],na.rm=TRUE)),width=240,bg="lightcyan"),
+                 textInput3("kgroups","k groups",
+                            placeholder="4",width=100,bg="lightcyan")),
+          
+          column(3,
+                 hr(),
+                 br(),
+                 actionButton("makeSubset","Make Subgroup",
+                              icon=icon("object-group"),width="150px")
+                 
+          )
+        )
+      )
+    }
+  }
+})
+
+observeEvent(input$undoPrep,{
+  if(length(prepData$data)>1){
+    prepData$data=prepData$data[-length(prepData$data)]
+    prepData$code=prepData$code[-length(prepData$code)]
+    temp=prepData$data[length(prepData$data)]
+    updateTextInput(session,"mydata",value=temp)
+    prepData$data=prepData$data[-length(prepData$data)]
+    prepData$code=prepData$code[-length(prepData$code)]
+  }
+  
+})
+
+observeEvent(input$delRows,{
+  
+  
+    mydf=df()
+    
+    temp<-paste0("mydf[-c(",input$delRowsText,"),]")  
+    mydf<-tryCatch(eval(parse(text=temp)),error=function(e) "error")
+    if(class(mydf)=="data.frame"){
+    if(input$mydata=="deleted") {
+      deleted1<<-mydf
+      updateTextInput(session,"mydata",value="deleted1")
+    } else {
+      deleted<<-mydf  
+      updateTextInput(session,"mydata",value="deleted")
+    }
+    } else{
+       putmsg("Invalid Rows")
+    }
+  
+  
+})
+
+findIDname=function(df){
+   result="id"
+   i=1
+   while(result %in% colnames(df)){
+       result<-paste0("id",i)
+       i<-i+1
+   }
+   result
+}
+
+observeEvent(input$wide2long,{
+  
+  mydf=df()
+  temp="reshape2::melt(mydf"
+  if(!is.null(input$id.var)){
+    ## id가 없으면 새로 만듬
+    addnew<-1
+    for(i in 1:length(input$id.var)){
+        if(length(unique(mydf[[input$id.var[i]]]))==nrow(mydf)) addnew<-0
+    }
+    if(addnew) {
+       idname=findIDname(df)
+       mydf[[idname]]<-rownames(mydf) 
+       idvar=vector2str(c(idname,input$id.var))
+    } else{
+         idvar=vector2str(input$id.var)
+    }
+    temp=paste0(temp,",id.vars=",idvar)
+  } else{
+    idname=findIDname(df)
+    mydf[[idname]]<-rownames(mydf) 
+    temp=paste0(temp,",id.vars='",idname,"'")
+  }
+  if(length(input$measure.vars)>=1) {
+    groupvar=vector2str(input$measure.vars)
+    temp=mypaste(temp,"measure.vars=",groupvar)
+  }
+  if(input$variable.name!="") temp=mypaste(temp,",variable.name='",input$variable.name,"'")
+  if(input$value.name!="") temp=mypaste(temp,",value.name='",input$value.name,"'")
+  temp=paste0(temp,")")
+  
+  mydf<-tryCatch(eval(parse(text=temp)),error=function(e) "error")
+  if(class(mydf)=="data.frame"){
+    if(input$mydata=="melted") {
+      melted1<<-mydf
+      updateTextInput(session,"mydata",value="melted1")
+    } else {
+      melted<<-mydf  
+      updateTextInput(session,"mydata",value="melted")
+    }
+  } else{
+    putmsg(temp)
+  }
+  
+  
+})
+
+
+observeEvent(input$long2wide,{
+  
+  if((input$value.var2!="") & (length(input$id.var2)*length(input$measure.vars2)!=0)){
+    
+    mydf=df()
+    idvar=vector2form(input$id.var2)
+    measurevar=vector2form(input$measure.vars2)
+    temp="reshape2::dcast(mydf"
+    temp=mypaste(temp,idvar,"~",measurevar)
+    temp=mypaste(temp,"value.var='",input$value.var2,"')")
+    
+    mydf<-tryCatch(eval(parse(text=temp)),error=function(e) "error")
+    if(class(mydf)=="data.frame"){
+      if(input$mydata=="casted") {
+        casted1<<-mydf
+        updateTextInput(session,"mydata",value="casted1")
+      } else {
+        casted<<-mydf  
+        updateTextInput(session,"mydata",value="casted")
+      }
+    } else{
+      putmsg(temp)
+    }
+    
+    
+  } else putmsg("Please select the variable and press button")
+  
+})
+
+prepData<-reactiveValues(data=c(),code=c())
+
+observeEvent( input$mydata,{
+  
+  prepData$data <- c(prepData$data,input$mydata)
+  prepData$code <- c(prepData$code,"")
+  
+})
+
+output$Chooser=renderUI({
+  
+  mydf=df()
+  size=min(ncol(mydf),20)
+  
+  tagList(
+    
+    h3("Preprocessing"),
+    wellPanel(
+      h4("Calculate sum or mean / Recode / Standardize / Remove"),
+      fluidRow(
+        column(8,
+               chooserInput("mychooser", "All Columns", "Selected Columns",
+                            colnames(mydf), c(), size = size, multiple = TRUE,width=120
+               )),
+        column(3,
+               textInput3("newname","",placeholder = "New column name",width=150,bg="lightcyan"),
+               br(),
+               actionButton("calSum","Calculate Sum",icon=icon("plus-circle"),width="150px"),
+               actionButton("calMean","Calculate Mean",icon=icon("calculator"),width="150px"),
+               actionButton("renameCol","Rename Column",icon=icon("user-o"),width="150px"),
+               actionButton("selectCol","Select Columns",icon=icon("filter"),width="150px"),
+               br(),
+               br(),
+               actionButton("recodeRank","Reverse rank",icon=icon("sort-numeric-desc"),width="150px"),
+               actionButton("standardize","Standardize",icon=icon("align-justify"),width="150px"),
+               actionButton("deleteCol","Remove Columns",icon=icon("trash"),width="150px")
+        )),
+      h4("Calculate with columns"),
+      fluidRow(
+        column(8,textInput3("calText","",placeholder = "Example: LDL = TC - TG/5 -HDL",width=350,bg="lightcyan")),
+        column(3,actionButton("calculateCol","Calculate",icon=icon("calculator"),width="150px"))
+      ),
+      h4("Apply Filter"),
+      fluidRow(
+        column(8,textInput3("filterText","",placeholder = "sex=='Male' & age>60",width=350,bg="lightcyan")),
+        column(3,actionButton("applyFilter","Filter",icon=icon("filter"),width="150px"))
+      ),
+      h4("Delete Rows"),
+      fluidRow(
+        column(8,textInput3("delRowsText","",placeholder = "1,2,3 or 1:10 or 1,2,10:12",width=350,bg="lightcyan")),
+        column(3,actionButton("delRows","Delete Rows",icon=icon("trash-o"),width="150px"))
+      ),
+      h4("Summarize Data with mean and se"),
+      fluidRow(
+        column(8,selectInput3("summaryGroup",NULL,choices =c("Select group(s)"="",colnames(mydf)),multiple=TRUE,width=350)),
+        column(3,actionButton("summarySEGroup","Summarize",icon=icon("table"),width="150px"))
+      ),
+      uiOutput("Grouping"),
+      uiOutput("factorColUI"),
+      h4("Make Long Form"),
+      fluidRow(
+        column(8,
+               selectInput3("id.var",NULL,choices =c("id var(s)"="",colnames(mydf)),multiple=TRUE,width=120),
+               selectInput3("measure.vars",NULL,choices =c("measure var(s)"="",colnames(mydf)),multiple=TRUE,width=120),
+               textInput3("variable.name","",placeholder="variable name",width=120),
+               textInput3("value.name","",placeholder="value name",width=120)
+               ),
+        column(3,actionButton("wide2long","Make Long Form",icon=icon("arrows-v"),width="150px"))
+      ),
+      h4("Make Wide Form"),
+      fluidRow(
+        column(8,
+               selectInput3("id.var2",NULL,choices =c("id var(s)"="",colnames(mydf)),multiple=TRUE,width=120),
+               selectInput3("measure.vars2",NULL,choices =c("measure var(s)"="",colnames(mydf)),multiple=TRUE,width=120),
+               selectInput3("value.var2",NULL,choices =c("value var"="",colnames(mydf)),width=120)),
+        column(3,actionButton("long2wide","Make Wide Form",icon=icon("arrows-h"),width="150px"))
+      ),
+      actionButton("undoPrep","Undo",icon=icon("undo"),width="150px")
+      
+    ))
+})
+
+vector2str=function(vars,del=FALSE){
+  if(length(vars)<1) return(NULL)
+  if(del) {
+    temp=paste0("c(-",vars[1])
+    if(length(vars)>1) {
+      for (i in 2:length(vars)) temp=paste0(temp,",-",vars[i])
+    }
+    temp=paste0(temp,")")
+    
+  } else{
+    temp=paste0("c('",vars[1],"'")
+    if(length(vars)>1) {
+      for (i in 2:length(vars)) temp=paste0(temp,",'",vars[i],"'")
+    }
+    temp=paste0(temp,")")
+    
+  }
+  temp
+}
+
+vector2form=function(vars){
+  if(length(vars)<1) return(NULL)
+  temp=vars[1]
+  if(length(vars)>1) {
+    for (i in 2:length(vars)) temp=paste(temp,"+",vars[i])
+  }
+  temp
+}
+
+pastecomma=function(...){
+  paste(...,sep=",")
+}
 
 })
 

@@ -1,0 +1,149 @@
+---
+title: "ADHD data"
+author: "Keon-Woong Moon"
+date: '2016-08-07'
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+This example is about the teacher's intervention for students with ADHD. The ADHD data contained in semMediation package is a dataset contains measures about the teacher's knowlege, empathy and intervention about attention-deficit hyperactivity disorder(ADHD).(Source:Effects of teacher's knowledge and empathy on educational intervention for ADHD: Focused on the mediating effet of empathy. J Korean Acad Psychiatr Ment Health Nurs 2013:22;45-55.)
+
+### Step 1. Define latent variables 
+
+First of all, let's start from defining the latent variables. You can define latent variables with `=~` operator.
+
+```{r,message=FALSE}
+require(lavaan)
+require(semPlot)
+require(ReporteRs)
+require(semMediation)
+require(extrafont)
+
+model='
+knowledge =~ general+symptoms+treatmt
+intervention =~ classrm+instruct
+'
+```
+### Step 2. Total Effect Model
+
+```{r,fig.width=9,fig.height=7,warning=FALSE}
+model=paste0(model,"intervention~knowledge")
+fit=sem(model,data=ADHD)
+mediationPlot(fit,width=8,height=4,whatLabels="est",base_family="Arial",base_size=4)
+```
+
+### Step 3. Define the mediation effect
+
+You can define mediation effects using the makeEquation() function. Here the `knowledge` is an independent variable(X) and `intervention` is a response variable(Y) and `empathy` is a mediator(M).
+
+```{r,comment=NA}
+model='
+knowledge =~ general+symptoms+treatmt
+empathy =~ cognitiv+emotion+disposit+attitude
+intervention =~ classrm+instruct
+'
+mediationModel=makeEquation(X="knowledge",M="empathy",Y="intervention")
+cat(mediationModel)
+```
+
+You can add this mediation effects to the model. The final model is as follows.
+```{r,comment=NA}
+model=paste0(model,mediationModel)
+cat(model)
+```
+
+### Step 4. Fit the model
+
+You can fit this model by using the lavaan::sem() function.
+```{r,comment=NA}
+fit=sem(model,data=ADHD)
+mediationPlot(fit,width=8,mediationOnly = TRUE,base_family="Arial",whatLabels = "name")
+summary(fit,standardized= TRUE ,fit.measures= FALSE ,rsquare= FALSE ,modindices= FALSE )
+```
+
+### Step 5. Draw a plot
+
+You can draw figure using semPlot::semPaths() function. Alternatively, you can draw a plot with semMediation::mediationPlot().  
+
+```{r,fig.width=10,fig.height=7}
+mediationPlot(fit,width=8,height=4,base_family="Arial",whatLabels = "est",residuals = FALSE,base_size=4)
+```
+
+### Step 6. Make a Cronbach alpha table
+
+You can make a table shows a Cronbacha alpha and Guttmans lambda 6.
+
+```{r,warning=FALSE}
+result=fit2alpha(fit)
+df2Flextable(result)
+```
+```{r,out.width="360px",echo=FALSE}
+#knitr::include_graphics("1.png")
+```
+
+
+
+
+### Step 7. Draw a correlation plot
+
+You can draw correlation plot by CorPlot function
+
+```{r,fig.width=9,fig.height=7,message=FALSE}
+require(mycor)
+require(ggplot2)
+```
+```{r}
+corTable(fit)
+```
+
+```{r,out.width="360px",echo=FALSE}
+#knitr::include_graphics("2.png")
+```
+
+```{r}
+corPlot(fit)
+```
+
+### Step 8. Make a model fit measures table
+
+
+You can make a table summarizing model fit measures.
+
+```{r}
+result=modelFitTable(fit)
+df2Flextable(result,vanilla=TRUE,widths=c(rep(0.5,10),1.5,1,1))
+```
+```{r,out.width="360px",echo=FALSE}
+#::include_graphics("3.png")
+```
+
+### Step 9. Make an estimates table 
+
+```{r}
+result=estimatesTable(fit,ci=TRUE)
+df2Flextable(result,vanilla=TRUE)
+```
+
+```{r,out.width="360px",echo=FALSE}
+#knitr::include_graphics("4.png")
+```
+
+### Step 10. Make a mediation effects  table
+
+```{r}
+result=estimatesTable(fit,mediation=TRUE,ci=TRUE)
+MyTable=df2Flextable(result,vanilla=TRUE)
+MyTable[result$Variables=='indirect effect',,side='top']=chprop(borderProperties(style='solid'))
+MyTable
+```
+
+```{r,out.width="360px",echo=FALSE}
+#knitr::include_graphics("5.png")
+```
+
+You can draw direct and indirect effects.
+```{r,fig.width=9,fig.height=7}
+mediationPlot(fit,whatLabels = "est",base_family="Arial",residuals = FALSE,indirect=TRUE,regression=TRUE,mediationOnly = TRUE)
+```

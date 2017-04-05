@@ -21,7 +21,7 @@ textInput2<-function (inputId, label, value = "",width=100,...)
 textInput3<-function (inputId, label, value = "",width=100,...) 
 {
   div(style="display:inline-block;",
-      tags$label(label, `for` = inputId), 
+      if(label!="") tags$label(label, `for` = inputId), 
       tags$input(id = inputId, type = "text", class="form-control",value = value, 
                  style=paste("width: ",width,"px;",sep=""),...))
 }

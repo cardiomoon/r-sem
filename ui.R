@@ -53,13 +53,14 @@ shinyUI(fluidPage(
                                                           "ADHD",
                                                              "uploaded_file"),
                                               selected = "HolzingerSwineford1939"),
+                                 textInput("mydata","Enter data name",value="HolzingerSwineford1939"),
                                  selectInput("SelectEx",label="Select Example",
                                              choices=c("None"=0,"Confirmatory Factor Analysis"=1,
                                                "Structural Equation Model"=2,"Cross-Validation Analysis"=3,
                                                "Mediation Effect Analysis"=4,
                                                "ADHD data"=6),
                                              selected=0),
-                           
+                                 
                                  actionButton("ResetEx","Reset")
                              )),
                              column(8, htmlOutput("dataTable"),
@@ -68,7 +69,11 @@ shinyUI(fluidPage(
                                  rHandsontableOutput('hot',height=350),
                              
                                  hr(),
-                                 downloadButton('exportCSV','Export to CSV')
+                                 downloadButton('exportCSV','Export to CSV'),
+                                 checkboxInput("preprocessing","use preprocessing",value=TRUE),
+                                 conditionalPanel(condition="input.preprocessing==true",
+                                             uiOutput("Chooser"))
+                                 
                                         
                              )
                          ),
