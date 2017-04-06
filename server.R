@@ -23,6 +23,7 @@ require(stringr)
 require(mycor)
 require(dplyr)
 require(moonBook)
+require(DT)
 #require(shinyTree)
 
 source("cleaning.R")
@@ -302,52 +303,41 @@ shinyServer(function(input, output,session) {
        df
    })
    
-   data=reactive({
-       temp<-input$mydata
-       if(is.null(input$hot)) DF=origin()
-       else {
-           if((current=="")|(current==input$mydata)){
-              current<<-temp
-              DF=hot_to_r(input$hot)
-         
-           } else {
-               DF=origin()
-               current<<-temp
-           }       
-           
-       }       
-       values[["DF"]]=DF
-       DF
-   })
    
    observe({
      updateSelectInput(session,"base_family",choices=c("Helvetica","NanumGothic",fonts()))
      
    })
    
-   output$hot<-renderRHandsontable({
-      DF=data() 
+   output$x1<-DT::renderDataTable(
+     DT::datatable({
+       df()
       
-      hot=rhandsontable(DF) %>%
-          hot_context_menu(
-              customOpts = list(
-                  csv = list(name = "Remove all rows except 1",
-                             callback = htmlwidgets::JS(
-                                 "function (key, options) {
-                                 this.alter('remove_row',1,this.countRows()-1);
-   }"))))
-      
-      hot
-   })
+   }))
    
-   output$table1<-renderTable({
-       values$DF
-      
+   proxy = dataTableProxy('x1')
+   
+   observeEvent(input$x1_cell_edit, {
+     x<-df()
+     info = input$x1_cell_edit
+     str(info)
+     i = info$row
+     j = info$col
+     v = info$value
+     x[i, j] <- DT:::coerceValue(v, x[i, j])
+     replaceData(proxy, x, resetPaging = FALSE)
+     
+      if(input$mydata=="edited"){
+          edited1<<-x
+          updateTextInput(session,"mydata",value="edited1")
+      } else{
+          edited<<-x
+          updateTextInput(session,"mydata",value="edited")
+      }
    })
    
   df=reactive({
-      values$DF
-      
+       origin()
   })
   
   observe({
@@ -2504,6 +2494,27 @@ observeEvent(input$long2wide,{
   
 })
 
+observeEvent(input$defLatVar,{
+    rightchoices=input$mychooser$right
+    if(input$newname=="") {
+           putmsg("Enter latent varable name first!")
+    } else if(length(rightchoices)==0){
+           putmsg("Please select columns first !")
+    } else{
+         temp=input$equation
+         if(temp!="") temp=paste0(temp,"\n")
+         temp1=paste(input$newname,"=~",plustext(rightchoices))
+         temp=paste0(temp,temp1)
+         updateTextAreaInput(session,"equation",value=temp)
+         updateTextInput(session,"newname",value="")
+         # input$mychooser$left<-c(input$mychooser$left,rightchoices)           
+         # input$mychooser$right<-c()
+         # temp2=paste0("Latent variable(",input$newname,") Definition is added in equation")
+         # putmsg(temp2)
+    }
+  
+})
+
 prepData<-reactiveValues(data=c(),code=c())
 
 observeEvent( input$mydata,{
@@ -2539,7 +2550,8 @@ output$Chooser=renderUI({
                br(),
                actionButton("recodeRank","Reverse rank",icon=icon("sort-numeric-desc"),width="150px"),
                actionButton("standardize","Standardize",icon=icon("align-justify"),width="150px"),
-               actionButton("deleteCol","Remove Columns",icon=icon("trash"),width="150px")
+               actionButton("deleteCol","Remove Columns",icon=icon("trash"),width="150px"),
+               actionButton("defLatVar","Make Latent Variable",width="150px")
         )),
       h4("Calculate with columns"),
       fluidRow(
@@ -2618,6 +2630,23 @@ vector2form=function(vars){
 pastecomma=function(...){
   paste(...,sep=",")
 }
+
+output$paraEst=renderUI({
+    show.table=0
+    fit=tryCatch(myfit(),error= function(e) "error")
+    if(class(fit) !="character"){
+         show.table=1 
+         result=parameterEstimates(fit,standardized=TRUE)
+         
+         
+         output$paraEstTable=renderFlexTable({
+            df2Flextable(result)
+         })
+    }
+    tagList(
+        if(show.table) tableOutput('paraEstTable')
+    )
+})
 
 })
 

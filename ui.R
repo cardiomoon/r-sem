@@ -41,19 +41,21 @@ shinyUI(fluidPage(
                      fluidPage(
                          
                          fluidRow(
-                             column(4,htmlOutput("selectData"),
-                                    
-                                    wellPanel(
-                                 fileInput("file", label = "upload data(*.xlsx or *.csv)"),
-                                 radioButtons("Example", label = "Select Data",
+                             htmlOutput("selectData"),
+                             column(4,
+                                    fileInput("file", label = "upload data(*.xlsx or *.csv)")),
+                             column(4,
+                                 wellPanel(
+                                    radioButtons("Example", label = "Select Data",
                                               choices = c("HolzingerSwineford1939",
                                                           "PoliticalDemocracy",
                                                           "example1",
                                                           "example2",
                                                           "ADHD",
                                                              "uploaded_file"),
-                                              selected = "HolzingerSwineford1939"),
-                                 textInput("mydata","Enter data name",value="HolzingerSwineford1939"),
+                                              selected = "HolzingerSwineford1939"))),
+                              column(4,   
+                             textInput("mydata","Enter data name",value="HolzingerSwineford1939"),
                                  selectInput("SelectEx",label="Select Example",
                                              choices=c("None"=0,"Confirmatory Factor Analysis"=1,
                                                "Structural Equation Model"=2,"Cross-Validation Analysis"=3,
@@ -63,20 +65,20 @@ shinyUI(fluidPage(
                                  
                                  actionButton("ResetEx","Reset")
                              )),
-                             column(8, htmlOutput("dataTable"),
+                             htmlOutput("dataTable"),
                                     
-                                 #tableOutput('table2')
-                                 rHandsontableOutput('hot',height=350),
-                             
+                                 DT::dataTableOutput('x1'),
+                                 #rHandsontableOutput('hot',height=350),
+                                  
                                  hr(),
                                  downloadButton('exportCSV','Export to CSV'),
                                  checkboxInput("preprocessing","use preprocessing",value=TRUE),
                                  conditionalPanel(condition="input.preprocessing==true",
-                                             uiOutput("Chooser"))
+                                             uiOutput("Chooser")),
                                  
                                         
-                             )
-                         ),
+                             
+                         
                          a(id = "toggleHelpData", "Help for Data show/hide"),
                          shinyjs::hidden(
                            div(id="helpData",
@@ -254,9 +256,11 @@ shinyUI(fluidPage(
                             )
                             
                               )))),
+                         uiOutput("paraEst"),
                          checkboxInput("preview","Plot Preview",value = FALSE),
                          uiOutput('Model.ui'),
                          hr(),
+                         
                          fluidRow(
                            htmlOutput("Tables"),
                            checkboxInput("showtable","show tables",value=FALSE),
