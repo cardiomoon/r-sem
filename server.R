@@ -8,9 +8,8 @@ require(rmarkdown)
 require(readxl)
 #require(ggthemes)
 #require(reshape)
-require(rhandsontable)
 #require(shinyjs)
-require(ReporteRs)
+require(flextable)
 require(lavaan)
 require(semPlot)
 require(semTools)
@@ -23,11 +22,13 @@ require(stringr)
 require(mycor)
 require(dplyr)
 require(moonBook)
+require(rrtable)
 require(DT)
+require(webrSub)
 #require(shinyTree)
 
 source("cleaning.R")
-source("chooser.R")
+# source("chooser.R")
 
 
 #loadfonts()
@@ -309,11 +310,7 @@ shinyServer(function(input, output,session) {
      
    })
    
-   output$x1<-DT::renderDataTable(
-     DT::datatable({
-       df()
-      
-   }))
+   output$x1<-DT::renderDT(df(),editable=TRUE)
    
    proxy = dataTableProxy('x1')
    
@@ -324,7 +321,7 @@ shinyServer(function(input, output,session) {
      i = info$row
      j = info$col
      v = info$value
-     x[i, j] <- DT:::coerceValue(v, x[i, j])
+     x[i, j] <- DT::coerceValue(v, x[i, j])
      replaceData(proxy, x, resetPaging = FALSE)
      
       if(input$mydata=="edited"){
@@ -1740,25 +1737,25 @@ output$tableui=renderUI({
   if(input$equation!=""){
     tagList(
        htmlOutput("alpha"),
-       tableOutput("alphaTable"),
+       uiOutput("alphaTable"),
        htmlOutput("reliable"),
-       tableOutput("reliabilityTable"),
+       uiOutput("reliabilityTable"),
        htmlOutput("discrim"),
-       tableOutput("discriminantValidityTable"),
+       uiOutput("discriminantValidityTable"),
        htmlOutput("correlation"),
-       tableOutput("corTable"),
+       uiOutput("corTable"),
        h3("Correlation Plot"),
        plotOutput("corPlot"),
        htmlOutput("modfit"),
-       tableOutput("modelfitTable"),
+       uiOutput("modelfitTable"),
        checkboxInput("showcriteria","show criteria",value=FALSE),
        conditionalPanel(condition="input.showcriteria==true",
-                        tableOutput("modelfitTable2")
+                        uiOutput("modelfitTable2")
                         ),
        htmlOutput("estimate"),
-       tableOutput("estTable"),
+       uiOutput("estTable"),
        if(input$moderating) htmlOutput("mediation"),
-       if(input$moderating) tableOutput("mediationTable")
+       if(input$moderating) uiOutput("mediationTable")
     )
   }
 })
@@ -1781,13 +1778,16 @@ reliabilityTable_sub=function(no=1){
   df=as.data.frame(round(t(result),3))
   colnames(df)[5]="AVE"
   colnames(df)[6]="sqrt(AVE)"
-  df$Reliablity=(df$omega>=0.7)&(df$alpha>=0.7)
-  df$convergenceValidity=df$AVE>=0.5
-  df2Flextable(df,add.rownames=TRUE,vanilla=input$vanilla,width=c(1,1,1,1,1,1,1.5,1.5,1.5))
+  df$Reliablity=as.character((df$omega>=0.7)&(df$alpha>=0.7))
+  df$convergenceValidity=as.character(df$AVE>=0.5)
+  
+  df2flextable(df,add.rownames=TRUE,vanilla=input$vanilla) %>%
+     width(j=1:(ncol(df)+1),width=c(1,1,1,1,1,1,1.5,1.5,1.5))
 }
 
-output$reliabilityTable=renderFlexTable({
-  reliabilityTable_sub()
+output$reliabilityTable=renderUI({
+  reliabilityTable_sub() %>%
+    htmltools_value()
 })
 
 output$discrim=renderPrint({
@@ -1812,7 +1812,7 @@ discriminantValidityTable_sub=function(no=1){
   result1=inspect(fit,"cor.lv")
   diag(result1)<-NA
   
-  discriminantValidity<-df[[6]]>apply(result1,1,max,na.rm=TRUE)
+  discriminantValidity<-as.character(df[[6]]>apply(result1,1,max,na.rm=TRUE))
   #discriminantValidity
   diag(result1)<-1
   rdf=as.data.frame(result1)
@@ -1821,11 +1821,13 @@ discriminantValidityTable_sub=function(no=1){
   result=round(result,3)
   result=cbind(result,discriminantValidity)
   result
-  df2Flextable(result,add.rownames = TRUE,vanilla=input$vanilla)
+  
+  df2flextable(result,add.rownames = TRUE,vanilla=input$vanilla)
 }
 
-output$discriminantValidityTable=renderFlexTable({
-  discriminantValidityTable_sub()
+output$discriminantValidityTable=renderUI({
+  discriminantValidityTable_sub() %>%
+    htmltools_value()
 })
 
 
@@ -1835,12 +1837,14 @@ alphaTable_sub=function(no=1){
   else if(no==2) fit<-myfit2()
  
   result=fit2alpha(fit)
-  df2Flextable(result,vanilla=input$vanilla,width=c(2,4,1.5,1.5))
+  df2flextable(result,vanilla=input$vanilla) %>%
+    width(width=c(2,4,1.5,1.5))
 }
 
-output$alphaTable=renderFlexTable({
+output$alphaTable=renderUI({
   
-  alphaTable_sub()
+  alphaTable_sub() %>%
+    htmltools_value()
   
 })
 
@@ -1854,9 +1858,10 @@ corTable_sub=function(no=1){
   
 }
 
-output$corTable=renderFlexTable({
+output$corTable=renderUI({
   
-  corTable_sub()
+  corTable_sub() %>%
+    htmltools_value()
   
 })
 
@@ -1883,12 +1888,13 @@ modelfitTable_sub=function(no=1,mode="html"){
   else if(no==2) fit<-myfit2()
   
   result=modelFitTable(fit)
-  df2Flextable(result,vanilla=input$vanilla,widths=c(rep(0.5,10),2,1,1),mode=mode)
+  df2flextable(result,vanilla=input$vanilla) %>% width(width=c(rep(0.5,10),2,1,1))
 }
 
-output$modelfitTable=renderFlexTable({
+output$modelfitTable=renderUI({
   
-  modelfitTable_sub()
+  modelfitTable_sub() %>%
+    htmltools_value()
   
 })
 
@@ -1906,13 +1912,14 @@ modelfitTable2_sub=function(no=1,mode="html"){
   AIC="the lower, the better"
   BIC="the lower, the better"
   result=data.frame(x2df,p,CFI,GFI,AGFI,TLI,RMR,SRMR,RMESA,AIC,BIC)
-  df2Flextable(result,vanilla=input$vanilla,mode=mode)
+  df2flextable(result,vanilla=input$vanilla)
 }
 
 
-output$modelfitTable2=renderFlexTable({
+output$modelfitTable2=renderUI({
   
-  modelfitTable2_sub()
+  modelfitTable2_sub() %>%
+    htmltools_value()
   
 })
 
@@ -1924,13 +1931,14 @@ estTable_sub=function(no=1,mode="html"){
   else if(no==2) fit<-myfit2()
 
   result=estimatesTable(fit,ci=TRUE)
-  df2Flextable(result,vanilla=input$vanilla,mode=mode)
+  df2flextable(result,vanilla=input$vanilla)
   
 }
 
-output$estTable=renderFlexTable({
+output$estTable=renderUI({
   
-  estTable_sub()
+  estTable_sub() %>%
+    htmltools_value()
 })
 
 
@@ -1940,14 +1948,15 @@ mediationTable_sub=function(no=1,mode="html"){
   else if(no==2) fit<-myfit2()
 
   result=estimatesTable(fit,mediation=TRUE,ci=TRUE)
-  MyTable=df2Flextable(result,vanilla=input$vanilla,mode=mode)
-  MyTable[result$Variables=='indirect effect',,side='top']=chprop(borderProperties(style='solid'))
+  MyTable=df2flextable(result,vanilla=input$vanilla)
+  # MyTable[result$Variables=='indirect effect',,side='top']=chprop(borderProperties(style='solid'))
   MyTable
 }
 
-output$mediationTable=renderFlexTable({
+output$mediationTable=renderUI({
   
-  mediationTable_sub()
+  mediationTable_sub() %>%
+    htmltools_value()
   
 })
 
@@ -2639,12 +2648,13 @@ output$paraEst=renderUI({
          result=parameterEstimates(fit,standardized=TRUE)
          
          
-         output$paraEstTable=renderFlexTable({
-            df2Flextable(result)
+         output$paraEstTable=renderUI({
+            df2flextable(result) %>%
+             htmltools_value()
          })
     }
     tagList(
-        if(show.table) tableOutput('paraEstTable')
+        if(show.table) uiOutput('paraEstTable')
     )
 })
 

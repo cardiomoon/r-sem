@@ -1,5 +1,5 @@
 ---
-title: "Howto"
+title: "Web-based Analysis with R-sem"
 author: Keon-Woong Moon
 date: "`r Sys.time()`"
 documentclass: book
@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 
-```{r, child='Howto1.Rmd',cache=FALSE}
+```{r, child='Howto1.md',cache=FALSE}
 
 ```
 ```{r, child='Howto2.md',cache=FALSE}

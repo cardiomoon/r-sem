@@ -1,0 +1,57 @@
+\usepackage[hangul]{kotex}
+\usepackage{sectsty}
+\partfont{\sffamily\color{magenta}}
+\chapterfont{\sffamily\color{magenta}}
+\sectionfont{\sffamily\color{magenta}}
+\subsectionfont{\sffamily\color{magenta}}
+\subsubsectionfont{\sffamily\color{magenta}}
+\usepackage[onehalfspacing]{setspace}
+\usepackage{pdflscape}
+\usepackage{colortbl}
+\usepackage[table]{xcolor}
+\newcolumntype{U}{>{\columncolor[gray]{0.8}}c}
+\usepackage{tabularx,booktabs}
+\usepackage{boxedminipage}
+\usepackage{graphicx}
+\usepackage{rotating}
+\usepackage{rotfloat}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{subfigure}
+\usepackage{wrapfig}
+\usepackage{lipsum}
+\usepackage{multirow}
+\usepackage[
+singlelinecheck=false
+]{caption}
+\usepackage{makeidx}
+\usepackage{color}
+%\usepackage[usenames, dvipsnames]{color}
+\usepackage{framed}
+\usepackage{showidx}
+\usepackage[absolute]{textpos}
+\usepackage{fancyhdr}
+\DeclareGraphicsExtensions{.pdf,.png,.jpg}
+\makeindex
+\setlength{\parindent}{0pt}
+\definecolor{shadecolor}{rgb}{0.9,1,1}
+\textblockorigin{0mm}{0mm}
+\pagestyle{fancy}
+% with this we ensure that the chapter and section
+% headings are in lowercase.
+
+\renewcommand{\chaptermark}[1]{\markboth{\textbf{\thechapter\ \chaptername} \color{gray}$\bullet $ \color{black} \ #1}{}}
+%\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
+\renewcommand{\sectionmark}[1]{\markright{#1}{}}
+
+\fancyhf{}  % delete current setting for header and footer
+% \fancyfoot[LE,RO]{\sffamily\color{magenta}\thepage}
+ \fancyfoot[LE]{\sffamily\textbf\small\thepage}
+ \fancyfoot[RO]{\sffamily\textbf\small\leftmark\hspace{0.5cm}\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0.5pt}
+\addtolength{\headheight}{0.7pt} % make space for the rule
+\fancypagestyle{plain}{%
+   \fancyhead{} % get rid of headers on plain pages
+   \renewcommand{\headrulewidth}{0pt} % and the line
+}

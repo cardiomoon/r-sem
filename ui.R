@@ -8,9 +8,9 @@ library(shiny)
 library(markdown)
 library(shinythemes)
 #require(shinyjs)
-require(rhandsontable)
 require(shinyBS)
 require(shinyTree)
+require(DT)
 #require(shinyDND)
 
 source("textInput2.R")
@@ -67,7 +67,7 @@ shinyUI(fluidPage(
                              )),
                              htmlOutput("dataTable"),
                                     
-                                 DT::dataTableOutput('x1'),
+                                 DT::DTOutput('x1'),
                                  #rHandsontableOutput('hot',height=350),
                                   
                                  hr(),
